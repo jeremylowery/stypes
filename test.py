@@ -1,3 +1,4 @@
+
 from cStringIO import StringIO
 from decimal import Decimal
 import unittest
@@ -8,7 +9,12 @@ class FormatSequenceTestCase(unittest.TestCase):
     def test_list(self):
         spec = st.List("1;1;2")
         value = ["A", "B", "EE"]
-        print spec.format(value)
+        self.assertEquals(spec.format(value), "ABEE")
+
+    def test_format(self):
+        spec = st.List([1, 1, 10])
+        data = ["Y", "N", "Bacon"]
+        self.assertEquals(spec.format(data), "YNBacon     ")
         
 class ParseSequenceTestCase(unittest.TestCase):
     def test_with_structued_data_spec(self):

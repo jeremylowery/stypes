@@ -1,5 +1,7 @@
+
 import collections
 import copy
+import functools
 import re
 import string
 import struct
@@ -130,6 +132,16 @@ class _BaseSequence(Spec):
         # Use the built-in structs module to do the actual string split in C
         self._struct = struct.Struct(self._struct_fmt)
 
+        self._format_funcs = []
+        for pos_spec in self._pos_specs:
+            if hasattr(pos_spec, 'format'):
+                func = pos_spec.format
+            elif hasattr(pos_spec, 'width'):
+                func = functools.partial(_format_string, pos_spec.width)
+            else:
+                func = functools.partial(_format_string, pos_spec)
+            self._format_funcs.append(func)
+
     ## Convinenece to do parsing/conversion and conversion/formatting in single
     ## operations
     def expand(self, text_line):
@@ -152,6 +164,9 @@ class _BaseSequence(Spec):
             values = self._struct.unpack_from(string.ljust(self.width))
         v = [s(v) for s, v in zip(self._sub_parses, values)]
         return self._factory(v, self)
+
+    def format(self, listval):
+        return ''.join(s(v) for s, v in zip(self._format_funcs, listval))
 
     @property
     def _struct_fmt(self):
@@ -368,3 +383,6 @@ class ArrayValue(list):
 
     def convert_errors(self):
         return list(self._convert_errors)
+
+def _format_string(length, value):
+    return value[:length].ljust(length)
