@@ -4,12 +4,18 @@ import re
 import struct
 import string
 
-from .util import OrderedDict, ConvertError
+from .util import OrderedDict as _OrderedDict, ConvertError
 from .spec import Spec, Scalar, SpecificationError, tokenize_lines, atom_to_spec, isconverter
 from .sequence import Array
 
-class Dict(Spec):
-    """ Dictionary specification """
+class _BaseDict(Spec):
+    """ Abstract Base Class for Dict Types. Provided only for implementation inheritance.
+    At the time of the writing, the only difference is the type of the value class
+    """
+
+
+    _value_type = None
+
     def __init__(self, key_map=()):
         self._key_map, self._convert_map = _norm_mapping_key_spec(key_map)
 
@@ -49,7 +55,7 @@ class Dict(Spec):
             values = self._struct.unpack_from(text_line.ljust(self.width))
 
         values = [s(v) for s, v in zip(self._sub_parses, values)]
-        return DictValue(zip(self._keys, values), self)
+        return self._value_type(zip(self._keys, values), self)
 
     def format(self, rec):
         parts = []
@@ -91,6 +97,7 @@ class Dict(Spec):
 
 class DictValue(dict):
     def __init__(self, values, field_type):
+        dict.__init__(self, values)
         self._field_type = field_type
         self._convert_errors = []
 
@@ -123,9 +130,12 @@ class DictValue(dict):
         """ @return: the typed record as a line of text """
         return self._field_type.squash(self)
 
-class DictValue(OrderedDict):
+class Dict(_BaseDict):
+    _value_type = DictValue
+
+class OrderedDictValue(_OrderedDict):
     def __init__(self, values, field_type):
-        OrderedDict.__init__(self, values)
+        _OrderedDict.__init__(self, values)
         self._field_type = field_type
         self._convert_errors = []
 
@@ -158,6 +168,8 @@ class DictValue(OrderedDict):
         """ @return: the typed record as a line of text """
         return self._field_type.squash(self)
 
+class OrderedDict(_BaseDict):
+    _value_type = OrderedDictValue
 
 _AR_FNAME = re.compile(r"^([A-Za-z0-9_-]+)\S*\[(\d+)\]\S*")
 def _norm_mapping_key_spec(rep):
