@@ -1,4 +1,19 @@
-stypes
+stypes: Rich Type Library for Textual Data
 ======
 
-Python types for reading and writing fixed text-oriented data records
+stypes is a text parsing, conversion and formatting library written to
+efficiently handle large fixed-width text record data files. Convert text
+streams into dictionaries, lists, tuples, named tuples, ordered dictionaries
+and more using text layout specifications written in 100% pure python.
+
+A simple example of turning some text into a list:
+
+```python
+
+from stypes import List
+spec = List([1, 1, 1, 10])
+text = "YYNJohnson"
+assert List.parse(text) == ["Y", "Y", "N", "Johnson"]
+```
+
+
