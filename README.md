@@ -1,5 +1,5 @@
-stypes: Rich Type Library for Textual Data
-======
+Rich Type Library for Textual Data
+==================================
 
 stypes is a text parsing, conversion and formatting library written to
 efficiently handle large fixed-width text record data files. Convert text
