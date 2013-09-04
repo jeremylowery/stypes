@@ -98,16 +98,16 @@ class _BaseDict(Spec):
 class DictValue(dict):
     def __init__(self, values, field_type):
         dict.__init__(self, values)
-        self._field_type = field_type
+        self._spec = field_type
         self._convert_errors = []
 
     def __copy__(self):
-        rec = DictValue(self, self._field_type)
+        rec = type(self)(self, self._spec)
         rec._convert_errors = list(self._convert_errors)
         return rec
 
     def __deepcopy__(self, memo):
-        rec = DictValue(self, self._field_type)
+        rec = type(self)(self, self._spec)
         rec._convert_errors = copy.deepcopy(self._convert_errors, memo)
         return rec
 
@@ -120,15 +120,21 @@ class DictValue(dict):
     ## Delegators to the field type. It gets everything but parse because
     ## parse is used to create a DictValue
     def format(self):
-        return self._field_type.format(self)
+        return self._spec.format(self)
 
     def expand(self, text_line):
         """ parse and convert in one shot """
-        return self._field_type.expand(self)
+        return self._spec.expand(self)
 
     def squash(self, rec):
         """ @return: the typed record as a line of text """
-        return self._field_type.squash(self)
+        return self._spec.squash(self)
+
+    def to_text(self):
+        return self._spec.to_text(self)
+
+    def from_text(self):
+        return self._spec.from_text(self)
 
 class Dict(_BaseDict):
     _value_type = DictValue
@@ -136,16 +142,16 @@ class Dict(_BaseDict):
 class OrderedDictValue(_OrderedDict):
     def __init__(self, values, field_type):
         _OrderedDict.__init__(self, values)
-        self._field_type = field_type
+        self._spec = field_type
         self._convert_errors = []
 
     def __copy__(self):
-        rec = DictValue(self, self._field_type)
+        rec = OrderedDictValue(self, self._spec)
         rec._convert_errors = self._convert_errors
         return rec
 
     def __deepcopy__(self, memo):
-        rec = DictValue(self, self._field_type)
+        rec = OrderedDictValue(self, self._spec)
         rec._convert_errors = copy.deepcopy(self._convert_errors, memo)
         return rec
 
@@ -158,15 +164,21 @@ class OrderedDictValue(_OrderedDict):
     ## Delegators to the field type. It gets everything but parse because
     ## parse is used to create a DictValue
     def format(self):
-        return self._field_type.format(self)
+        return self._spec.format(self)
 
     def expand(self, text_line):
         """ parse and convert in one shot """
-        return self._field_type.expand(self)
+        return self._spec.expand(self)
 
     def squash(self, rec):
         """ @return: the typed record as a line of text """
-        return self._field_type.squash(self)
+        return self._spec.squash(self)
+
+    def from_text(self):
+        return self._spec.from_text(self)
+
+    def to_text(self):
+        return self._spec.to_text(self)
 
 class OrderedDict(_BaseDict):
     _value_type = OrderedDictValue

@@ -20,12 +20,14 @@ class NamedTuple(Spec):
         self._field_names = [n for n, c in self._key_map]
 
         self._pos_converts = []
+        has_pos_spec = False
         for name, spec in self._key_map:
             if isconverter(spec):
                 self._pos_converts.append(spec)
+                has_pos_spec = True
             else:
-                self._pos_converts.append(None)
-        if not any(self._pos_converts):
+                self._pos_converts.append(_null_convert)
+        if not has_pos_spec:
             self._pos_converts = None
 
         nt_class = collections.namedtuple('BaseNamedTuple', self._field_names)
@@ -41,6 +43,16 @@ class NamedTuple(Spec):
             else:
                 self._sub_parses.append(string.rstrip)
 
+        self._format_funcs = []
+        for name, spec in self._key_map:
+            if hasattr(spec, 'format'):
+                func = spec.format
+            elif hasattr(spec, 'width'):
+                func = functools.partial(_format_string, spec.width)
+            else:
+                func = functools.partial(_format_string, spec)
+            self._format_funcs.append(func)
+
         # Use the built-in structs module to do the actual string split in C
         self._struct = struct.Struct(self._struct_fmt)
 
@@ -54,6 +66,10 @@ class NamedTuple(Spec):
         values = [s(v) for s, v in zip(self._sub_parses, values)]
         return self._my_class(values, self)
 
+
+    def format(self, listval):
+        return ''.join(s(v) for s, v in zip(self._format_funcs, listval))
+
     def from_text(self, avalue):
         if not self._pos_converts:
             return copy.copy(avalue)
@@ -61,14 +77,11 @@ class NamedTuple(Spec):
         convert_errors = []
         nvalue = []
         for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            if convert:
-                try:
-                    nvalue.append(convert.from_text(value))
-                except ConvertError, e:
-                    nvalue.append(value)
-                    convert_errors.append((idx, value, e))
-            else:
+            try:
+                nvalue.append(convert.from_text(value))
+            except ConvertError, e:
                 nvalue.append(value)
+                convert_errors.append((idx, value, e))
         return self._my_class(nvalue, self, convert_errors)
 
     def to_text(self, avalue):
@@ -78,14 +91,11 @@ class NamedTuple(Spec):
         convert_errors = []
         nvalue = []
         for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            if convert:
-                try:
-                    nvalue.append(convert.to_text(value))
-                except ConvertError, e:
-                    nvalue.append(value)
-                    convert_errors.append((idx, value, e))
-            else:
+            try:
+                nvalue.append(convert.to_text(value))
+            except ConvertError, e:
                 nvalue.append(value)
+                convert_errors.append((idx, value, e))
         return self._my_class(nvalue, self, convert_errors)
 
     @property
@@ -105,43 +115,20 @@ class _NamedTupleValue(object):
     def to_text(self):
         return self._spec.to_text(self)
 
+    def format(self):
+        return self._spec.format(self)
+
 class _BaseSequence(Spec):
     _factory = None
 
     def __init__(self, pos_specs):
         self._pos_specs = _norm_sequence_pos_specs(pos_specs)
-        self._pos_converts = []
-        for spec in self._pos_specs:
-            if isconverter(spec):
-                self._pos_converts.append(spec)
-            else:
-                self._pos_converts.append(None)
-        if not any(self._pos_converts):
-            self._pos_converts = None
-
-        # We inspect the positional specs in the key map to determine which
-        # ones have their own parsing routine. If they do not, then we treat 
-        # them as a simple string and strip the trailing white space
-        self._sub_parses = []
-        for idx, pos_spec  in enumerate(self._pos_specs):
-            if hasattr(pos_spec, 'parse'):
-                self._sub_parses.append(pos_spec.parse)
-            else:
-                self._sub_parses.append(string.rstrip)
-
         # Use the built-in structs module to do the actual string split in C
         self._struct = struct.Struct(self._struct_fmt)
 
-        self._format_funcs = []
-        for pos_spec in self._pos_specs:
-            if hasattr(pos_spec, 'format'):
-                func = pos_spec.format
-            elif hasattr(pos_spec, 'width'):
-                func = functools.partial(_format_string, pos_spec.width)
-            else:
-                func = functools.partial(_format_string, pos_spec)
-            self._format_funcs.append(func)
-
+        self._setup_parse_funs()
+        self._setup_format_funs()
+        self._setup_convert_objs()
     ## Convinenece to do parsing/conversion and conversion/formatting in single
     ## operations
     def expand(self, text_line):
@@ -156,6 +143,7 @@ class _BaseSequence(Spec):
     def width(self):
         return sum(s.width for s in self._pos_specs)
 
+    ## Parsing
     def parse(self, string):
         try:
             values = self._struct.unpack_from(string)
@@ -165,12 +153,86 @@ class _BaseSequence(Spec):
         v = [s(v) for s, v in zip(self._sub_parses, values)]
         return self._factory(v, self)
 
-    def format(self, listval):
-        return ''.join(s(v) for s, v in zip(self._format_funcs, listval))
-
     @property
     def _struct_fmt(self):
         return ''.join('%ds' % f.width for  f in self._pos_specs)
+
+    def _setup_parse_funs(self):
+        """ Assign a list of parsing functions to the state of the spec type
+        to allow fast iteration of field parsers during parsing. If the
+        positional spec has a parse method, use that. Otherwise, we just
+        strip whitespace off the right."""
+
+        self._sub_parses = []
+        for idx, pos_spec  in enumerate(self._pos_specs):
+            if hasattr(pos_spec, 'parse'):
+                self._sub_parses.append(pos_spec.parse)
+            else:
+                self._sub_parses.append(string.rstrip)
+
+    ## Formatting
+    def format(self, listval):
+        return ''.join(s(v) for s, v in zip(self._format_funcs, listval))
+
+    def _setup_format_funs(self):
+        self._format_funcs = []
+        for pos_spec in self._pos_specs:
+            if hasattr(pos_spec, 'format'):
+                func = pos_spec.format
+            elif hasattr(pos_spec, 'width'):
+                func = functools.partial(_format_string, pos_spec.width)
+            else:
+                func = functools.partial(_format_string, pos_spec)
+            self._format_funcs.append(func)
+
+    ## Conversion Responsibilities
+    def from_text(self, avalue):
+        if not self._pos_converts:
+            return copy.copy(avalue)
+
+        convert_errors = []
+        nvalue = []
+        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
+            try:
+                nvalue.append(convert.from_text(value))
+            except ConvertError, e:
+                nvalue.append(value)
+                convert_errors.append((idx, value, e))
+        return self._my_class(nvalue, self, convert_errors)
+
+    def to_text(self, avalue):
+        if not self._pos_converts:
+            return copy.copy(avalue)
+
+        convert_errors = []
+        nvalue = []
+        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
+            try:
+                nvalue.append(convert.to_text(value))
+            except ConvertError, e:
+                nvalue.append(value)
+                convert_errors.append((idx, value, e))
+        return self._my_class(nvalue, self, convert_errors)
+
+    def _setup_convert_objs(self):
+        self._pos_converts = []
+        has_pos_convert = False
+        for spec in self._pos_specs:
+            if isconverter(spec):
+                self._pos_converts.append(spec)
+                has_pos_convert = True
+            else:
+                self._pos_converts.append(_null_convert)
+        # Save the from/to text loops from iterating
+        if not has_pos_convert:
+            self._pos_converts = None
+
+class _NullConvert(object):
+    """ A Null converter to keep from having a lot of if statements in
+    to_text/from_text methods """
+    to_text = lambda s, v: v
+    from_text = lambda s, v: v
+_null_convert = _NullConvert()
 
 def _norm_sequence_pos_specs(specs):
     """ Normalize sequence specs passed in from client calls. These can have
@@ -185,7 +247,7 @@ class List(_BaseSequence):
         _BaseSequence.__init__(self, *a, **k)
         self._factory = _ListValue
 
-    ## Converter Responsibilities
+    ## Conversion Responsibilities
     def from_text(self, avalue):
         nvalue = copy.deepcopy(avalue)
         if not self._pos_converts:
@@ -212,7 +274,6 @@ class List(_BaseSequence):
                     convert_errors.append((idx, value, e))
         return nvalue
 
-
 class _ListValue(list):
     def __init__(self, other, spec):
         list.__init__(self, other)
@@ -235,7 +296,17 @@ class _ListValue(list):
     def convert_errors(self):
         return list(self._convert_errors)
 
+    ## Conversion Responsibilities
+    def to_text(self):
+        return self._spec.to_text(self)
 
+    def from_text(self):
+        return self._spec.from_text(self)
+
+    def format(self):
+        return self._spec.format(self)
+
+## Tuple
 class Tuple(_BaseSequence):
     def __init__(self, *a, **k):
         _BaseSequence.__init__(self, *a, **k)
@@ -301,6 +372,15 @@ class _TupleValue(tuple):
 
     def convert_errors(self):
         return list(self._convert_errors)
+
+    def from_text(self):
+        return self._spec.from_text(self)
+
+    def to_text(self):
+        return self._spec.to_text(self)
+
+    def format(self):
+        return self._spec.format(self)
 
 class Array(Spec):
     def __init__(self, count, spec):
