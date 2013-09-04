@@ -35,3 +35,8 @@ nosetests.xml
 .pydevproject
 
 bigtest.py
+MANIFEST
+
+.*.swp
+.*.swo
+
