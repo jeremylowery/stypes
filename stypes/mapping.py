@@ -13,7 +13,6 @@ class _BaseDict(Spec):
     At the time of the writing, the only difference is the type of the value class
     """
 
-
     _value_type = None
 
     def __init__(self, key_map=()):
@@ -22,47 +21,37 @@ class _BaseDict(Spec):
         # We inspect the positional specs in the key map to determine which
         # ones have their own parsing routine. If they do not, then we treat 
         # them as a simple string and strip the trailing white space
-        self._sub_parses = []
+        self._unpack_funs = []
         for idx, (name, spec)  in enumerate(self._key_map):
-            if hasattr(spec, 'parse'):
-                self._sub_parses.append(spec.parse)
+            if hasattr(spec, 'unpack'):
+                self._unpack_funs.append(spec.unpack)
             else:
-                self._sub_parses.append(string.rstrip)
+                self._unpack_funs.append(string.rstrip)
 
         # Use the built-in structs module to do the actual string split in C
         self._struct = struct.Struct(self._struct_fmt)
-
-    ## Convinenece to do parsing/conversion and conversion/formatting in single
-    ## operations
-    def expand(self, text_line):
-        """ turn the line of text into a typed record """
-        return self.from_text(self.parse(text_line))
-
-    def squash(self, rec):
-        """ turn the typed record into a line of text """
-        return self.format(self.to_text(rec))
 
     ## Layout Responsibility
     @property
     def width(self):
         return sum(t.width for name, t in self._key_map)
 
-    def parse(self, text_line):
+    def unpack(self, text_line):
         try:
             values = self._struct.unpack_from(text_line)
         except struct.error:
             # pad the line out so that struct will take it
             values = self._struct.unpack_from(text_line.ljust(self.width))
 
-        values = [s(v) for s, v in zip(self._sub_parses, values)]
+        values = [s(v) for s, v in zip(self._unpack_funs, values)]
         return self._value_type(zip(self._keys, values), self)
 
-    def format(self, rec):
+    def pack(self, rec):
         parts = []
         for name, ftype in self._key_map:
             value = rec[name]
-            if hasattr(ftype, 'format'):
-                value = ftype.format(value)
+            if hasattr(ftype, 'pack'):
+                value = ftype.pack(value)
             if len(value) > ftype.width:
                 value = value[:ftype.width]
             elif len(value) < ftype.width:
@@ -117,18 +106,10 @@ class DictValue(dict):
     def convert_errors(self):
         return list(self._convert_errors)
 
-    ## Delegators to the field type. It gets everything but parse because
-    ## parse is used to create a DictValue
-    def format(self):
-        return self._spec.format(self)
-
-    def expand(self, text_line):
-        """ parse and convert in one shot """
-        return self._spec.expand(self)
-
-    def squash(self, rec):
-        """ @return: the typed record as a line of text """
-        return self._spec.squash(self)
+    ## Delegators to the field type. It gets everything but unpack because
+    ## unpack is used to create a DictValue
+    def pack(self):
+        return self._spec.pack(self)
 
     def to_text(self):
         return self._spec.to_text(self)
@@ -161,18 +142,10 @@ class OrderedDictValue(_OrderedDict):
     def convert_errors(self):
         return list(self._convert_errors)
 
-    ## Delegators to the field type. It gets everything but parse because
-    ## parse is used to create a DictValue
-    def format(self):
-        return self._spec.format(self)
-
-    def expand(self, text_line):
-        """ parse and convert in one shot """
-        return self._spec.expand(self)
-
-    def squash(self, rec):
-        """ @return: the typed record as a line of text """
-        return self._spec.squash(self)
+    ## Delegators to the field type. It gets everything but unpack because
+    ## unpack is used to create a DictValue
+    def pack(self):
+        return self._spec.pack(self)
 
     def from_text(self):
         return self._spec.from_text(self)

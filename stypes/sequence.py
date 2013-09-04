@@ -36,39 +36,39 @@ class NamedTuple(Spec):
         # We inspect the positional specs in the key map to determine which
         # ones have their own parsing routine. If they do not, then we treat 
         # them as a simple string and strip the trailing white space
-        self._sub_parses = []
+        self._sub_unpacks = []
         for idx, (name, spec)  in enumerate(self._key_map):
-            if hasattr(spec, 'parse'):
-                self._sub_parses.append(spec.parse)
+            if hasattr(spec, 'unpack'):
+                self._sub_unpacks.append(spec.unpack)
             else:
-                self._sub_parses.append(string.rstrip)
+                self._sub_unpacks.append(string.rstrip)
 
-        self._format_funcs = []
+        self._pack_funcs = []
         for name, spec in self._key_map:
-            if hasattr(spec, 'format'):
-                func = spec.format
+            if hasattr(spec, 'pack'):
+                func = spec.pack
             elif hasattr(spec, 'width'):
-                func = functools.partial(_format_string, spec.width)
+                func = functools.partial(_pack_string, spec.width)
             else:
-                func = functools.partial(_format_string, spec)
-            self._format_funcs.append(func)
+                func = functools.partial(_pack_string, spec)
+            self._pack_funcs.append(func)
 
         # Use the built-in structs module to do the actual string split in C
         self._struct = struct.Struct(self._struct_fmt)
 
-    def parse(self, text_line):
+    def unpack(self, text_line):
         try:
             values = self._struct.unpack_from(text_line)
         except struct.error:
             # pad the line out so that struct will take it
             values = self._struct.unpack_from(text_line.ljust(self.width))
 
-        values = [s(v) for s, v in zip(self._sub_parses, values)]
+        values = [s(v) for s, v in zip(self._sub_unpacks, values)]
         return self._my_class(values, self)
 
 
-    def format(self, listval):
-        return ''.join(s(v) for s, v in zip(self._format_funcs, listval))
+    def pack(self, listval):
+        return ''.join(s(v) for s, v in zip(self._pack_funcs, listval))
 
     def from_text(self, avalue):
         if not self._pos_converts:
@@ -115,8 +115,8 @@ class _NamedTupleValue(object):
     def to_text(self):
         return self._spec.to_text(self)
 
-    def format(self):
-        return self._spec.format(self)
+    def pack(self):
+        return self._spec.pack(self)
 
 class _BaseSequence(Spec):
     _factory = None
@@ -126,64 +126,55 @@ class _BaseSequence(Spec):
         # Use the built-in structs module to do the actual string split in C
         self._struct = struct.Struct(self._struct_fmt)
 
-        self._setup_parse_funs()
-        self._setup_format_funs()
+        self._setup_unpack_funs()
+        self._setup_pack_funs()
         self._setup_convert_objs()
-    ## Convinenece to do parsing/conversion and conversion/formatting in single
-    ## operations
-    def expand(self, text_line):
-        """ turn the line of text into a typed record """
-        return self.from_text(self.parse(text_line))
-
-    def squash(self, rec):
-        """ turn the typed record into a line of text """
-        return self.format(self.to_text(rec))
 
     @property
     def width(self):
         return sum(s.width for s in self._pos_specs)
 
     ## Parsing
-    def parse(self, string):
+    def unpack(self, string):
         try:
             values = self._struct.unpack_from(string)
         except struct.error:
             # pad the line out so that struct will take it
             values = self._struct.unpack_from(string.ljust(self.width))
-        v = [s(v) for s, v in zip(self._sub_parses, values)]
+        v = [s(v) for s, v in zip(self._sub_unpacks, values)]
         return self._factory(v, self)
 
     @property
     def _struct_fmt(self):
         return ''.join('%ds' % f.width for  f in self._pos_specs)
 
-    def _setup_parse_funs(self):
+    def _setup_unpack_funs(self):
         """ Assign a list of parsing functions to the state of the spec type
-        to allow fast iteration of field parsers during parsing. If the
-        positional spec has a parse method, use that. Otherwise, we just
+        to allow fast iteration of field unpackrs during parsing. If the
+        positional spec has a unpack method, use that. Otherwise, we just
         strip whitespace off the right."""
 
-        self._sub_parses = []
+        self._sub_unpacks = []
         for idx, pos_spec  in enumerate(self._pos_specs):
-            if hasattr(pos_spec, 'parse'):
-                self._sub_parses.append(pos_spec.parse)
+            if hasattr(pos_spec, 'unpack'):
+                self._sub_unpacks.append(pos_spec.unpack)
             else:
-                self._sub_parses.append(string.rstrip)
+                self._sub_unpacks.append(string.rstrip)
 
     ## Formatting
-    def format(self, listval):
-        return ''.join(s(v) for s, v in zip(self._format_funcs, listval))
+    def pack(self, listval):
+        return ''.join(s(v) for s, v in zip(self._pack_funcs, listval))
 
-    def _setup_format_funs(self):
-        self._format_funcs = []
+    def _setup_pack_funs(self):
+        self._pack_funcs = []
         for pos_spec in self._pos_specs:
-            if hasattr(pos_spec, 'format'):
-                func = pos_spec.format
+            if hasattr(pos_spec, 'pack'):
+                func = pos_spec.pack
             elif hasattr(pos_spec, 'width'):
-                func = functools.partial(_format_string, pos_spec.width)
+                func = functools.partial(_pack_string, pos_spec.width)
             else:
-                func = functools.partial(_format_string, pos_spec)
-            self._format_funcs.append(func)
+                func = functools.partial(_pack_string, pos_spec)
+            self._pack_funcs.append(func)
 
     ## Conversion Responsibilities
     def from_text(self, avalue):
@@ -303,8 +294,8 @@ class _ListValue(list):
     def from_text(self):
         return self._spec.from_text(self)
 
-    def format(self):
-        return self._spec.format(self)
+    def pack(self):
+        return self._spec.pack(self)
 
 ## Tuple
 class Tuple(_BaseSequence):
@@ -379,16 +370,16 @@ class _TupleValue(tuple):
     def to_text(self):
         return self._spec.to_text(self)
 
-    def format(self):
-        return self._spec.format(self)
+    def pack(self):
+        return self._spec.pack(self)
 
 class Array(Spec):
     def __init__(self, count, spec):
         self._count = count
         self._spec = atom_to_spec(spec)
 
-        # Do this lookup here to save it from doing in parse
-        self._sub_parse = hasattr(spec, 'parse')
+        # Do this lookup here to save it from doing in unpack
+        self._sub_unpack = hasattr(spec, 'unpack')
         if isconverter(spec):
             self._converter = spec
         else:
@@ -399,21 +390,21 @@ class Array(Spec):
         return self._count * self._spec.width
 
     ## Layout Responsibilities
-    def parse(self, text_line):
+    def unpack(self, text_line):
         if len(text_line) < self.width:
             # pad the line out so that struct won't blow up
             text_line += ' ' * (self.width - len(text_line))
         parts = map(''.join, zip(*[iter(text_line)] * self._spec.width))
-        if self._sub_parse:
-            parts = map(self._spec.parse, parts)
+        if self._sub_unpack:
+            parts = map(self._spec.unpack, parts)
         return ArrayValue(parts, self)
 
-    def format(self, avalue):
+    def pack(self, avalue):
         parts = []
         field = self._spec
         for value in avalue:
-            if hasattr(field, 'format'):
-                value = field.format(value)
+            if hasattr(field, 'pack'):
+                value = field.pack(value)
             if len(value) > field.width:
                 value = value[:field.width]
             elif len(value) < field.width:
@@ -464,5 +455,5 @@ class ArrayValue(list):
     def convert_errors(self):
         return list(self._convert_errors)
 
-def _format_string(length, value):
+def _pack_string(length, value):
     return value[:length].ljust(length)

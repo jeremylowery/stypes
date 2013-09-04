@@ -14,7 +14,7 @@ class OrderedDictTestCase(unittest.TestCase):
             ('age', Scalar(3)),
             ('colors', Array(3, Integer(4)))])
         inp = "jeremy      lowery         s031000100020003"
-        rec = spec.parse(inp)
+        rec = spec.unpack(inp)
         self.assertEquals(rec['first_name'], 'jeremy')
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
@@ -42,7 +42,7 @@ class DictTestCase(unittest.TestCase):
             ('age', Scalar(3)),
             ('colors', Array(3, Integer(4)))])
         inp = "jeremy      lowery         s031000100020003"
-        rec = spec.parse(inp)
+        rec = spec.unpack(inp)
         self.assertEquals(rec['first_name'], 'jeremy')
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
@@ -53,7 +53,7 @@ class DictTestCase(unittest.TestCase):
         rec = rec.to_text()
         self.assertEquals(rec['colors'], ['0001', '0002', '0003'])
 
-    def test_parse_with_explicit_type_spec(self):
+    def test_unpack_with_explicit_type_spec(self):
         spec = Dict([
             ('first_name', Scalar(12)),
             ('last_name',  Scalar(15)),
@@ -61,14 +61,14 @@ class DictTestCase(unittest.TestCase):
             ('age', Scalar(3)),
             ('colors', Array(3, Scalar(4)))])
         inp = "jeremy      lowery         s031000100020003"
-        rec = spec.parse(inp)
+        rec = spec.unpack(inp)
         self.assertEquals(rec['first_name'], 'jeremy')
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
         self.assertEquals(rec['age'], '031')
         self.assertEquals(rec['colors'], ['0001', '0002', '0003'])
 
-    def test_parse_with_structured_data_spec(self):
+    def test_unpack_with_structured_data_spec(self):
         spec = Dict([
             ('first_name', 12),
             ('last_name',  15),
@@ -76,18 +76,18 @@ class DictTestCase(unittest.TestCase):
             ('age', 3)
         ])
         inp = "jeremy      lowery         s"
-        rec = spec.parse(inp)
+        rec = spec.unpack(inp)
         self.assertFalse(rec.convert_errors())
         self.assertEquals(rec['first_name'], 'jeremy')
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
 
-    def test_parse_with_string_spec(self):
+    def test_unpack_with_string_spec(self):
         inp = "YYNGOT CUT OF"
-        rec = Dict("a;b;c;msg:100").parse(inp)
+        rec = Dict("a;b;c;msg:100").unpack(inp)
         self.assertEquals(rec['msg'], 'GOT CUT OF')
 
-    def test_multiparse_with_data_structure_spec(self):
+    def test_multiunpack_with_data_structure_spec(self):
         spec = Dict([
             ('first_name', 12),
             ('last_name',  15),
@@ -97,18 +97,18 @@ class DictTestCase(unittest.TestCase):
         buf = ("jeremy      lowery         s 23\n"
                "tom         jones          V X3\n")
         for line in buf.split("\n"):
-            rec = spec.parse(line)
+            rec = spec.unpack(line)
     
-    def test_array_parse(self):
+    def test_array_unpack(self):
         expected = {'color': ['a', 'b', 'c']}
 
         # explicit as a pair
         spec = Dict([(('color', 3), 1)])
-        self.assertEquals(spec.parse("abc"), expected)
+        self.assertEquals(spec.unpack("abc"), expected)
         
         # Given as a string
         spec = Dict("color[3]")
-        self.assertEquals(spec.parse("abc"), expected)
+        self.assertEquals(spec.unpack("abc"), expected)
 
     def test_sub_with_structured_data_spec(self):
         spec = Dict([
@@ -123,7 +123,7 @@ class DictTestCase(unittest.TestCase):
             ]))
         ])
         text = "jeremyloweryM100 elm stbelton, tx"
-        r = spec.parse(text)
+        r = spec.unpack(text)
         self.assertEquals(r['demo']['first_name'], 'jeremy')
         self.assertEquals(r['demo']['last_name'], 'lowery')
         self.assertEquals(r['demo']['sex'], 'M')

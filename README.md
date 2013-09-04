@@ -13,7 +13,7 @@ A simple example of turning some text into a list:
 from stypes import List
 spec = List([1, 1, 1, 10])
 text = "YYNJohnson"
-assert List.parse(text) == ["Y", "Y", "N", "Johnson"]
+assert List.unpack(text) == ["Y", "Y", "N", "Johnson"]
 ```
 
 

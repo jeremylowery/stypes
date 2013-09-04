@@ -93,7 +93,7 @@ def spec_from_repr(rep):
     key_map = []
     convert_map = []
     if isinstance(rep, basestring):
-        # XXX:TODO Field for subrecords, will have to have a stateful parser
+        # XXX:TODO Field for subrecords, will have to have a stateful unpackr
         rep = map(string.strip, rep.split(";"))
     for fieldspec in rep:
         name, field = _split_field_layout(fieldspec)

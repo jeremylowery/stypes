@@ -3,7 +3,7 @@ Current stypes version constant plus version pretty-print method.
 
 This functionality is contained in its own module to prevent circular import
 problems with ``__init__.py`` (which is loaded by setup.py during installation,
-which in turn needs access to this version information.)
+which in turn needs access to this version inpackion.)
 
 Credit is given to fabric, whose version.py is the basis for this module.
 """

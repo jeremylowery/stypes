@@ -7,7 +7,7 @@ import stypes as st
 
 class APITestCase(unittest.TestCase):
     """ Tests using the public package interface """
-    def test_from_parse_usage(self):
+    def test_from_unpack_usage(self):
         layout = [
             ('first_name', 12),
             ('last_name',  15),
@@ -15,11 +15,11 @@ class APITestCase(unittest.TestCase):
             ('age', 3)
         ]
         inp = "jeremy      lowery         s"
-        rec = st.parse(inp, layout)
+        rec = st.unpack(inp, layout)
         rec['last_name'] = 'smith'
         res = "jeremy      smith          s   "
-        self.assertEquals(st.format(rec, layout), res)
-        self.assertEquals(rec.format(), res)
+        self.assertEquals(st.pack(rec, layout), res)
+        self.assertEquals(rec.pack(), res)
 
     def test_standalone_usage(self):
         data = {
@@ -30,7 +30,7 @@ class APITestCase(unittest.TestCase):
             'colors': ['0001', '0002', '0003']
         }
 
-        text = st.format(data, [
+        text = st.pack(data, [
             ('first_name', 12),
             ('last_name',  15),
             ('middle_initial', 1),

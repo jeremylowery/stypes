@@ -32,7 +32,7 @@ class NumericTestCase(unittest.TestCase):
 
         # reading some text off of disk
         text = "100101550000525"
-        rec = line_item.expand(text)
+        rec = line_item.unpack(text).from_text()
 
         # the text was a little short, but that's ok
         self.assertFalse(rec.convert_errors())
@@ -40,11 +40,11 @@ class NumericTestCase(unittest.TestCase):
         # do some computation to the record and write it
         # back to disk
         rec['total'] = rec['price'] + rec['sales_tax']
-        new_text = line_item.squash(rec)
+        new_text = rec.to_text().pack()
 
         # Let's read the newly stored record and be sure the
         # computed total was saved correctly
-        new_rec = line_item.expand(new_text)
+        new_rec = line_item.unpack(new_text).from_text()
         self.assertEquals(new_rec['total'], rec['total'])
 
     def test_width(self):
@@ -80,7 +80,7 @@ class NumericTestCase(unittest.TestCase):
         # Overflow
         test("999.99",  "1000", "000.00")
 
-    def test_invalid_format(self):
+    def test_invalid_pack(self):
         def test(*a):
             self.assertRaises(NumericFormatError, Numeric, *a)
         test("(4")
