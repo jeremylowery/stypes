@@ -19,19 +19,27 @@ class OrderedDictTestCase(unittest.TestCase):
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
         self.assertEquals(rec['age'], '031')
-        self.assertEquals(rec['colors'], ['0001', '0002', '0003'])
+        self.assertEquals(rec['colors'], [1, 2, 3])
         self.assertEquals(rec.items(), [
             ('first_name', 'jeremy'),
             ('last_name', 'lowery'),
             ('middle_initial', 's'),
             ('age', '031'),
-            ('colors', ['0001', '0002', '0003'])
+            ('colors', [1, 2, 3])
         ])
 
-        rec = rec.from_text()
-        self.assertEquals(rec['colors'], [1, 2, 3])
-        rec = rec.to_text()
-        self.assertEquals(rec['colors'], ['0001', '0002', '0003'])
+        self.assertEquals(rec.pack(), inp)
+
+class NDictTestCase(unittest.TestCase):
+    def test_foobar(self):
+        spec = Dict([
+            ('first_name', 12),
+            ('last_name',  15),
+            ('middle_initial', 1),
+            ('age', Integer(3))])
+        inp = "jeremy      lowery         s031"
+        rec = spec.unpack(inp)
+        self.assertEquals(rec['age'], 31)
 
 class DictTestCase(unittest.TestCase):
     def test_mainline(self):
@@ -47,11 +55,7 @@ class DictTestCase(unittest.TestCase):
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
         self.assertEquals(rec['age'], '031')
-        self.assertEquals(rec['colors'], ['0001', '0002', '0003'])
-        rec = rec.from_text()
         self.assertEquals(rec['colors'], [1, 2, 3])
-        rec = rec.to_text()
-        self.assertEquals(rec['colors'], ['0001', '0002', '0003'])
 
     def test_unpack_with_explicit_type_spec(self):
         spec = Dict([

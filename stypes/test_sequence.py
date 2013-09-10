@@ -3,6 +3,7 @@ import unittest
 from .sequence import Array, List, Tuple, NamedTuple
 from .spec import Scalar
 from .numeric import Integer
+from .util import ConvertError
 
 class ListTestCase(unittest.TestCase):
 
@@ -10,16 +11,30 @@ class ListTestCase(unittest.TestCase):
         spec = List([12, 15, 1, Integer(3)])
         string = "jeremy      lowery         s031"
         value = spec.unpack(string)
-        text_rec = ['jeremy', 'lowery', 's', '031']
-        self.assertEquals(value, text_rec)
-
-        value = value.from_text()
-        typed_rec = ['jeremy', 'lowery', 's', 31]
-        self.assertEquals(value, typed_rec)
-
-        value = value.to_text()
+        self.assertIsInstance(value, list)
+        text_rec = ['jeremy', 'lowery', 's', 31]
         self.assertEquals(value, text_rec)
         self.assertEquals(value.pack(), string)
+
+    def test_atom(self):
+        spec = List([Scalar(3), 1, 1])
+        v = spec.unpack("")
+        self.assertEquals(v.pack(), ' '*5)
+
+    def test_slice(self):
+        spec = List([1]*5)
+        v = spec.unpack("")
+        v[1] = "X"
+        self.assertEquals(v[1], "X")
+        v[2:4] = ["Y", "Z"]
+        self.assertEquals(v, ["", "X", "Y", "Z", ""])
+        v[::2] = "A"
+        self.assertEquals(v, ['A', 'X', 'A', 'Z', 'A'])
+
+    def test_assign(self):
+        spec = List([12, 15, 1, Integer(3)])
+        value = spec.unpack("")
+        value[3] = "4"
 
     def test_list(self):
         spec = List("1;1;2")
@@ -33,7 +48,7 @@ class ListTestCase(unittest.TestCase):
 
     def test_convert(self):
         spec = List([Integer(5)])
-        value = spec.unpack("00040").from_text()
+        value = spec.unpack("00040")
         self.assertEquals(value, [40])
 
     def test_nested_array(self):
@@ -52,44 +67,47 @@ class TupleTestCase(unittest.TestCase):
         spec = Tuple([12, 15, 1, Integer(3)])
         string = "jeremy      lowery         s031"
         value = spec.unpack(string)
-        text_rec = ('jeremy', 'lowery', 's', '031')
-        self.assertEquals(value, text_rec)
-
-        value = value.from_text()
-        typed_rec = ('jeremy', 'lowery', 's', 31)
-        self.assertEquals(value, typed_rec)
-
-        value = value.to_text()
+        text_rec = ('jeremy', 'lowery', 's', 31)
         self.assertEquals(value, text_rec)
         self.assertEquals(value.pack(), string)
 
     def test_tuple_convert(self):
         spec = Tuple([Integer(5)])
-        value = spec.unpack("00040").from_text()
+        value = spec.unpack("00040")
         self.assertEquals(value, (40,))
 
-class NamedTupleTestCase(unittest.TestCase):
+class ArrayTestCase(unittest.TestCase):
     def test_mainline(self):
-        spec = NamedTuple([
+        spec = Array(3, Integer(1))
+        string = "123"
+        value = spec.unpack(string)
+        self.assertEquals(value, [1, 2, 3])
+        self.assertEquals(value.pack(), string)
+
+class NamedTupleTestCase(unittest.TestCase):
+    def setUp(self):
+        self._spec = NamedTuple([
             ('first_name', 12),
             ('last_name',  15),
             ('middle_initial', 1),
             ('age', Integer(3))
         ])
+
+    def test_mainline(self):
         buf = "jeremy      lowery         s 23"
-        tup = spec.unpack(buf)
+        tup = self._spec.unpack(buf)
         self.assertEquals(tup.first_name, "jeremy")
         self.assertEquals(tup.last_name, "lowery")
         self.assertEquals(tup.middle_initial, "s")
-        self.assertEquals(tup.age, " 23")
-        
-        tup = tup.from_text()
         self.assertEquals(tup.age, 23)
-
-        tup = tup.to_text()
-        self.assertEquals(tup.age, "023")
+        
         buf = "jeremy      lowery         s023"
         self.assertEquals(tup.pack(), buf)
+
+    def test_bad_data(self):
+        buf = "jeremy      lowery         sX23"
+        tup = self._spec.unpack(buf)
+        self.assertEquals(type(tup.age), ConvertError)
 
 if __name__ == '__main__': 
     unittest.main()
