@@ -57,8 +57,8 @@ class _BaseDict(Spec):
             return ''.join(s(v) for s, v in zip(self._pack_funs, value))
 
         for idx, to_str in self._to_str_funs:
-            str_values[idx] = to_str(value[idx])
-        return ''.join(s(v) for s, v in zip(self._pack_funs, str_values))
+            value[idx] = to_str(value[idx])
+        return ''.join(s(v) for s, v in zip(self._pack_funs, value))
 
     def _setup_to_str_funs(self):
         # Functions to call when we convert from a value to a string
