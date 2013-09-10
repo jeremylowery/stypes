@@ -6,340 +6,109 @@ import re
 import string
 import struct
 
-from .spec import Spec, tokenize_lines, Scalar, atom_to_spec, isconverter
+from .spec import Spec, atom_to_spec_seq, atom_to_scalar, atom_to_spec_map
+
 from .util import OrderedDict, ConvertError
 
-class NamedTuple(Spec):
+class BaseSequence(Spec):
+    _itype = None
+    _str_itype = None
+
+    def __init__(self, pos_specs=()):
+        self._pos_specs = atom_to_spec_seq(pos_specs)
+        self._setup_from_str_funs()
+        self._setup_to_str_funs()
+        self._unpack_funs = [p.unpack for p in self._pos_specs]
+        self._pack_funs = [p.pack for p in self._pos_specs]
+        self._struct = struct.Struct(self._struct_fmt)
+
     @property
     def width(self):
         return sum(s.width for s in self._pos_specs)
 
-    def __init__(self, key_map=()):
-        from .mapping import _norm_mapping_key_spec
-        self._key_map, cm = _norm_mapping_key_spec(key_map)
-        self._field_names = [n for n, c in self._key_map]
-
-        self._pos_converts = []
-        has_pos_spec = False
-        for name, spec in self._key_map:
-            if isconverter(spec):
-                self._pos_converts.append(spec)
-                has_pos_spec = True
-            else:
-                self._pos_converts.append(_null_convert)
-        if not has_pos_spec:
-            self._pos_converts = None
-
-        nt_class = collections.namedtuple('BaseNamedTuple', self._field_names)
-        self._my_class = type('NamedTuple', (_NamedTupleValue, nt_class), {})
-
-        # We inspect the positional specs in the key map to determine which
-        # ones have their own parsing routine. If they do not, then we treat 
-        # them as a simple string and strip the trailing white space
-        self._sub_unpacks = []
-        for idx, (name, spec)  in enumerate(self._key_map):
-            if hasattr(spec, 'unpack'):
-                self._sub_unpacks.append(spec.unpack)
-            else:
-                self._sub_unpacks.append(string.rstrip)
-
-        self._pack_funcs = []
-        for name, spec in self._key_map:
-            if hasattr(spec, 'pack'):
-                func = spec.pack
-            elif hasattr(spec, 'width'):
-                func = functools.partial(_pack_string, spec.width)
-            else:
-                func = functools.partial(_pack_string, spec)
-            self._pack_funcs.append(func)
-
-        # Use the built-in structs module to do the actual string split in C
-        self._struct = struct.Struct(self._struct_fmt)
-
+    ## unpack
     def unpack(self, text_line):
         try:
             values = self._struct.unpack_from(text_line)
         except struct.error:
             # pad the line out so that struct will take it
             values = self._struct.unpack_from(text_line.ljust(self.width))
+        
+        values = [s(v) for s, v in zip(self._unpack_funs, values)]
+        for idx, from_str in self._from_str_funs:
+            values[idx] = from_str(values[idx])
+        return self._itype(values, self)
 
-        values = [s(v) for s, v in zip(self._sub_unpacks, values)]
-        return self._my_class(values, self)
-
-
-    def pack(self, listval):
-        return ''.join(s(v) for s, v in zip(self._pack_funcs, listval))
-
-    def from_text(self, avalue):
-        if not self._pos_converts:
-            return copy.copy(avalue)
-
-        convert_errors = []
-        nvalue = []
-        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            try:
-                nvalue.append(convert.from_text(value))
-            except ConvertError, e:
-                nvalue.append(value)
-                convert_errors.append((idx, value, e))
-        return self._my_class(nvalue, self, convert_errors)
-
-    def to_text(self, avalue):
-        if not self._pos_converts:
-            return copy.copy(avalue)
-
-        convert_errors = []
-        nvalue = []
-        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            try:
-                nvalue.append(convert.to_text(value))
-            except ConvertError, e:
-                nvalue.append(value)
-                convert_errors.append((idx, value, e))
-        return self._my_class(nvalue, self, convert_errors)
+    def _setup_from_str_funs(self):
+        # Functions to call when we convert from a string to a value
+        self._from_str_funs = []
+        for idx, spec in enumerate(self._pos_specs):
+            if hasattr(spec, 'from_text'):
+                self._from_str_funs.append((idx, spec.from_text))
 
     @property
     def _struct_fmt(self):
-        return ''.join('%ds' % f.width for name, f in self._key_map)
+        return ''.join('%ds' % s.width for s in self._pos_specs)
         
+    ## Pack
+    def pack(self, value):
+        # Shortcut
+        if not self._to_str_funs:
+            return ''.join(s(v) for s, v in zip(self._pack_funs, value))
+
+        str_values = list(value)
+        for idx, to_str in self._to_str_funs:
+            str_values[idx] = to_str(value[idx])
+        return ''.join(s(v) for s, v in zip(self._pack_funs, str_values))
+
+    def as_strings(self, value):
+        """ Return a builtin NamedTuple that is an 'export' of the value
+        into strings
+        """
+        if not self._to_str_funs:
+            return self._str_itype(value)
+
+        str_value = list(value)
+        for idx, to_str in self._to_str_funs:
+            str_value[idx] = to_str(value[idx])
+        return self._str_itype(*str_value)
+
+    def _setup_to_str_funs(self):
+        # Functions to call when we convert from a value to a string
+        self._to_str_funs = []
+        for idx, spec in enumerate(self._pos_specs):
+            if hasattr(spec, 'to_text'):
+                self._to_str_funs.append((idx, spec.to_text))
+
+## NamedTuple
+class NamedTuple(BaseSequence):
+    def __init__(self, key_map=()):
+        self._key_map = atom_to_spec_map(key_map)
+        self._field_names = [n for n, c in self._key_map]
+        self._str_itype = collections.namedtuple('BaseNamedTuple', self._field_names)
+        self._itype = type('NamedTupleValue', (_NamedTupleValue, self._str_itype), {})
+
+        pos_specs = [c for n, c in self._key_map]
+        BaseSequence.__init__(self, pos_specs)
+
 class _NamedTupleValue(object):
-    def __new__(cls, value, spec, convert_errors=None):
+    def __new__(cls, value, spec):
         i = cls.__bases__[1].__new__(cls, *value)
         i._spec = spec
-        i._convert_errors = convert_errors or []
         return i
 
-    def from_text(self):
-        return self._spec.from_text(self)
-
-    def to_text(self):
-        return self._spec.to_text(self)
-
     def pack(self):
         return self._spec.pack(self)
 
-class _BaseSequence(Spec):
-    _factory = None
-
-    def __init__(self, pos_specs):
-        self._pos_specs = _norm_sequence_pos_specs(pos_specs)
-        # Use the built-in structs module to do the actual string split in C
-        self._struct = struct.Struct(self._struct_fmt)
-
-        self._setup_unpack_funs()
-        self._setup_pack_funs()
-        self._setup_convert_objs()
-
-    @property
-    def width(self):
-        return sum(s.width for s in self._pos_specs)
-
-    ## Parsing
-    def unpack(self, string):
-        try:
-            values = self._struct.unpack_from(string)
-        except struct.error:
-            # pad the line out so that struct will take it
-            values = self._struct.unpack_from(string.ljust(self.width))
-        v = [s(v) for s, v in zip(self._sub_unpacks, values)]
-        return self._factory(v, self)
-
-    @property
-    def _struct_fmt(self):
-        return ''.join('%ds' % f.width for  f in self._pos_specs)
-
-    def _setup_unpack_funs(self):
-        """ Assign a list of parsing functions to the state of the spec type
-        to allow fast iteration of field unpackrs during parsing. If the
-        positional spec has a unpack method, use that. Otherwise, we just
-        strip whitespace off the right."""
-
-        self._sub_unpacks = []
-        for idx, pos_spec  in enumerate(self._pos_specs):
-            if hasattr(pos_spec, 'unpack'):
-                self._sub_unpacks.append(pos_spec.unpack)
-            else:
-                self._sub_unpacks.append(string.rstrip)
-
-    ## Formatting
-    def pack(self, listval):
-        return ''.join(s(v) for s, v in zip(self._pack_funcs, listval))
-
-    def _setup_pack_funs(self):
-        self._pack_funcs = []
-        for pos_spec in self._pos_specs:
-            if hasattr(pos_spec, 'pack'):
-                func = pos_spec.pack
-            elif hasattr(pos_spec, 'width'):
-                func = functools.partial(_pack_string, pos_spec.width)
-            else:
-                func = functools.partial(_pack_string, pos_spec)
-            self._pack_funcs.append(func)
-
-    ## Conversion Responsibilities
-    def from_text(self, avalue):
-        if not self._pos_converts:
-            return copy.copy(avalue)
-
-        convert_errors = []
-        nvalue = []
-        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            try:
-                nvalue.append(convert.from_text(value))
-            except ConvertError, e:
-                nvalue.append(value)
-                convert_errors.append((idx, value, e))
-        return self._my_class(nvalue, self, convert_errors)
-
-    def to_text(self, avalue):
-        if not self._pos_converts:
-            return copy.copy(avalue)
-
-        convert_errors = []
-        nvalue = []
-        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            try:
-                nvalue.append(convert.to_text(value))
-            except ConvertError, e:
-                nvalue.append(value)
-                convert_errors.append((idx, value, e))
-        return self._my_class(nvalue, self, convert_errors)
-
-    def _setup_convert_objs(self):
-        self._pos_converts = []
-        has_pos_convert = False
-        for spec in self._pos_specs:
-            if isconverter(spec):
-                self._pos_converts.append(spec)
-                has_pos_convert = True
-            else:
-                self._pos_converts.append(_null_convert)
-        # Save the from/to text loops from iterating
-        if not has_pos_convert:
-            self._pos_converts = None
-
-class _NullConvert(object):
-    """ A Null converter to keep from having a lot of if statements in
-    to_text/from_text methods """
-    to_text = lambda s, v: v
-    from_text = lambda s, v: v
-_null_convert = _NullConvert()
-
-def _norm_sequence_pos_specs(specs):
-    """ Normalize sequence specs passed in from client calls. These can have
-    ints, strings, and types in them.
-    """
-    if isinstance(specs, basestring):
-        specs = tokenize_lines(specs)
-    return map(atom_to_spec, specs)
-
-class List(_BaseSequence):
-    def __init__(self, *a, **k):
-        _BaseSequence.__init__(self, *a, **k)
-        self._factory = _ListValue
-
-    ## Conversion Responsibilities
-    def from_text(self, avalue):
-        nvalue = copy.deepcopy(avalue)
-        if not self._pos_converts:
-            return nvalue
-
-        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            if convert:
-                try:
-                    nvalue[idx] = convert.from_text(value)
-                except ConvertError, e:
-                    convert_errors.append((idx, value, e))
-        return nvalue
-
-    def to_text(self, avalue):
-        nvalue = copy.deepcopy(avalue)
-        if not self._pos_converts:
-            return nvalue
-
-        for idx, (value, convert) in enumerate(zip(avalue, self._pos_converts)):
-            if convert:
-                try:
-                    nvalue[idx] = convert.to_text(value)
-                except ConvertError, e:
-                    convert_errors.append((idx, value, e))
-        return nvalue
-
-class _ListValue(list):
-    def __init__(self, other, spec):
-        list.__init__(self, other)
-        self._spec = spec
-        self._convert_errors = []
-
-    def __copy__(self):
-        rec = _ListValue(self, self._spec)
-        rec._convert_errors = list(self._convert_errors)
-        return rec
-
-    def __deepcopy__(self, memo):
-        rec = _ListValue(self, self._spec)
-        rec._convert_errors = copy.deepcopy(self._convert_errors, memo)
-        return rec
-
-    def add_convert_error(self, index, value, error):
-        self._convert_errors.append((index, value, error))
-
-    def convert_errors(self):
-        return list(self._convert_errors)
-
-    ## Conversion Responsibilities
-    def to_text(self):
-        return self._spec.to_text(self)
-
-    def from_text(self):
-        return self._spec.from_text(self)
-
-    def pack(self):
-        return self._spec.pack(self)
+    def as_strings(self):
+        return self._spec.as_strings(self)
 
 ## Tuple
-class Tuple(_BaseSequence):
+class Tuple(BaseSequence):
     def __init__(self, *a, **k):
-        _BaseSequence.__init__(self, *a, **k)
-        self._factory = _TupleValue
-
-    def from_text(self, avalue):
-        if not self._pos_converts:
-            return copy.copy(avalue)
-
-        convert_errors = []
-        nvalue = []
-        for idx, value in enumerate(avalue):
-            try:
-                conv = self._pos_converts[idx]
-            except IndexError:
-                nvalue.append(value)
-                continue
-            try:
-                nvalue.append(conv.from_text(value))
-            except ConvertError, e:
-                nvalue.append(value)
-                convert_errors.append((idx, value, e))
-        return _TupleValue(nvalue, self, convert_errors)
-
-    def to_text(self, avalue):
-        if not self._pos_converts:
-            return copy.copy(avalue)
-
-        convert_errors = []
-        nvalue = []
-        for idx, value in enumerate(avalue):
-            try:
-                conv = self._pos_converts[idx]
-            except IndexError:
-                nvalue.append(value)
-                continue
-            try:
-                nvalue.append(conv.to_text(value))
-            except ConvertError, e:
-                nvalue.append(value)
-                convert_errors.append((idx, value, e))
-        return _TupleValue(nvalue, self, convert_errors)
+        self._itype = _TupleValue
+        self._str_itype = tuple
+        BaseSequence.__init__(self, *a, **k)
 
 class _TupleValue(tuple):
     def __new__(cls, other, spec, convert_errors=None):
@@ -364,96 +133,114 @@ class _TupleValue(tuple):
     def convert_errors(self):
         return list(self._convert_errors)
 
-    def from_text(self):
-        return self._spec.from_text(self)
-
-    def to_text(self):
-        return self._spec.to_text(self)
-
     def pack(self):
         return self._spec.pack(self)
 
+## List
+class List(BaseSequence):
+    def __init__(self, *a, **k):
+        self._str_itype = list
+        self._itype = _ListValue
+        BaseSequence.__init__(self, *a, **k)
+
+class _ListValue(list):
+    def __init__(self, other, spec):
+        list.__init__(self, other)
+        self._spec = spec
+
+    def __copy__(self):
+        rec = type(self)(self, self._spec)
+        return rec
+
+    def __deepcopy__(self, memo):
+        rec = type(self)(self, self._spec)
+        return rec
+
+    ## List Protocol
+    def __setitem__(self, index, str_value):
+        if not isinstance(str_value, basestring):
+            return list.__setitem__(self, index, str_value)
+        
+        if isinstance(index, slice):
+            indexes = range(*index.indices(len(self)))
+        else:
+            indexes = [index]
+        
+        for index in indexes:
+            for fun_index, fun in self._spec._from_str_funs:
+                if fun_index == index:
+                    value = fun(str_value)
+                    break
+            else:
+                value = str_value
+            list.__setitem__(self, index, value)
+
+    def __delitem__(self, index):
+        raise TypeError("stype lists cannot change size")
+
+    def append(self, value):
+        raise TypeError("stype lists cannot change size")
+
+    def extend(self, other):
+        raise TypeError("stype lists cannot change size")
+
+    def insert(self, index, value):
+        raise TypeError("stype lists cannot change size")
+
+    def pop(self, index=-1):
+        raise TypeError("stype lists cannot change size")
+
+    def remove(self, index, value):
+        raise TypeError("stype lists cannot change size")
+
+    def reverse(self):
+        raise TypeError("Operation not supported")
+
+    ## stypes Protocol
+    def pack(self):
+        return self._spec.pack(self)
+
+## Array
 class Array(Spec):
+    """ Homogenous list """
     def __init__(self, count, spec):
         self._count = count
-        self._spec = atom_to_spec(spec)
+        self._spec = atom_to_scalar(spec)
+        self._struct = struct.Struct(self._struct_fmt)
 
-        # Do this lookup here to save it from doing in unpack
-        self._sub_unpack = hasattr(spec, 'unpack')
-        if isconverter(spec):
-            self._converter = spec
+        if hasattr(self._spec, 'from_text'):
+            self._from_str_fun = self._spec.from_text
         else:
-            self._converter = None
+            self._from_str_fun = None
+
+        if hasattr(self._spec, 'to_text'):
+            self._to_str_fun = self._spec.to_text
+        else:
+            self._to_str_fun = None
 
     @property
     def width(self):
         return self._count * self._spec.width
 
-    ## Layout Responsibilities
+    @property
+    def _struct_fmt(self):
+        return ('%ds' % self._spec.width)  * self._count
+
     def unpack(self, text_line):
-        if len(text_line) < self.width:
-            # pad the line out so that struct won't blow up
-            text_line += ' ' * (self.width - len(text_line))
-        parts = map(''.join, zip(*[iter(text_line)] * self._spec.width))
-        if self._sub_unpack:
-            parts = map(self._spec.unpack, parts)
-        return ArrayValue(parts, self)
+        try:
+            values = self._struct.unpack_from(text_line)
+        except struct.error:
+            # pad the line out so that struct will take it
+            values = self._struct.unpack_from(text_line.ljust(self.width))
+        
+        values = map(self._spec.unpack, values)
+        if self._from_str_fun:
+            values = map(self._from_str_fun, values)
+        return _ListValue(values, self)
 
-    def pack(self, avalue):
-        parts = []
-        field = self._spec
-        for value in avalue:
-            if hasattr(field, 'pack'):
-                value = field.pack(value)
-            if len(value) > field.width:
-                value = value[:field.width]
-            elif len(value) < field.width:
-                value = value.ljust(width)
-            parts.append(value)
-        return ''.join(parts)
+    def pack(self, values):
+        if self._to_str_fun:
+            values = map(self._to_str_fun, values)
+        return ''.join(map(self._spec.pack, values))
 
-    ## Converter Responsibilities
-    def from_text(self, avalue):
-        nvalue = copy.deepcopy(avalue)
-        if self._converter:
-            for idx, value in enumerate(avalue):
-                try:
-                    nvalue[idx] = self._converter.from_text(value)
-                except ConvertError, e:
-                    nrec.add_convert_error(idx, value, e)
-        return nvalue
 
-    def to_text(self, avalue):
-        nvalue = copy.deepcopy(avalue)
-        if self._converter:
-            for idx, value in enumerate(avalue):
-                try:
-                    nvalue[idx] = self._converter.to_text(value)
-                except ConvertError, e:
-                    nrec.add_convert_error(idx, value, e)
-        return nvalue
-
-class ArrayValue(list):
-    def __init__(self, values, field):
-        list.__init__(self, values)
-        self._field = field
-        self._convert_errors = []
-
-    def __copy__(self):
-        rec = ArrayValue(self, self._field)
-        rec._convert_errors = self._convert_errors
-        return rec
-
-    def __deepcopy__(self, memo):
-        rec = ArrayValue(self, self._field)
-        rec._convert_errors = copy.deepcopy(self._convert_errors, memo)
-        return rec
-
-    def add_convert_error(self, index, value, error):
-        self._convert_errors.append((index, value, error))
-
-    def convert_errors(self):
-        return list(self._convert_errors)
-
-def _pack_string(length, value):
-    return value[:length].ljust(length)
