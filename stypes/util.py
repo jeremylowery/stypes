@@ -5,10 +5,10 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
-class ConvertError(Exception):
-    def __init__(self, desc):
+class ConvertError(object):
+    def __init__(self, desc, string):
         self.desc = desc 
-        Exception.__init__(self, desc)
+        self.string = string
 
 class imemoize(object):
     """cache the return value of a method
