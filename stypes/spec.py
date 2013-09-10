@@ -40,17 +40,24 @@ import collections
 import string
 import re
 
-__all__ = ['SpecificationError', 'spec_from_repr', 'Spec', 'Scalar', 'isconverter']
-
-def isconverter(obj):
-    return hasattr(obj, 'to_text') and hasattr(obj, 'from_text')
+__all__ = ['SpecificationError', 'spec_from_repr', 'Spec', 'Scalar',
+           'atom_to_scalar', 'atom_to_spec_map', 'atom_to_spec_seq']
 
 class SpecificationError(Exception):
     pass
 
 class Spec(object):
     """ Abstract base class for all specifications to type check """
-    pass
+    width = 0
+
+    def unpack(self, s):
+        """ Given a text string, return a value object for the specification
+        """
+        return s.rstrip()
+
+    def pack(self, value):
+        """ Given a value object, return a text string representation """
+        return value[:self.width].ljust(self.width)
 
 class Scalar(Spec):
     def __init__(self, width):
@@ -61,8 +68,77 @@ def tokenize_lines(r):
     mappings and sequences """
     return map(string.strip, r.split(";"))
 
+def atom_to_spec_seq(specs):
+    if isinstance(specs, basestring):
+        specs = tokenize_lines(specs)
+    return map(atom_to_scalar, specs)
+
+_AR_FNAME = re.compile(r"^([A-Za-z0-9_-]+)\S*\[(\d+)\]\S*")
+def atom_to_spec_map(rep):
+    """ Convert an unknown variable atom into a specficiation map suitable
+    for mappings which comprise a list of pairs. Each pairs is of the form:
+    (name, spec)
+    """
+    from .sequence import Array
+
+    key_map = []
+    if isinstance(rep, basestring):
+        rep = tokenize_lines(rep)
+    for key_spec_repr in rep:
+        name, spec_atom = _split_key_spec(key_spec_repr)
+        
+        # Figure out the spec type
+        key_spec = atom_to_scalar(spec_atom)
+
+        # Figure out if an Array def was given to control the key_spec_type
+        if isinstance(name, (list, tuple)):
+            if len(name) != 2:
+                raise SpecificationError("Expected 2 element sequence or "
+                    "string for key_spec name, got %r" % name)
+            name, count = name
+            key_spec = Array(count, key_spec)
+        elif not isinstance(name, basestring):
+            raise SpecificationError("Expected 2 element sequence or string "
+                "for key_spec name, got %r" % name)
+        key_map.append((name, key_spec))
+    return key_map
+
+def _split_key_spec(spec):
+    if isinstance(spec, basestring):
+        if ":" in spec:
+            name, width = map(string.strip, spec.split(":", 1))
+        else:
+            name, width = spec, "1"
+    elif isinstance(spec, collections.Sequence):
+        if len(spec) > 1:
+            name, width = spec[:2]
+        elif len(spec) == 1:
+            name, width = spec, 1
+        else:
+            raise SpecificationError("Empty field spec given")
+    else:
+        raise SpecificationError("Expected sequence or string for field "
+            "spec not %r" % spec)
+
+    if isinstance(name, basestring):
+        array_match = _AR_FNAME.findall(name)
+        if array_match:
+            name = (array_match[0][0], int(array_match[0][1]))
+        
+    if isinstance(width, basestring):
+        try:
+            width = int(width)
+        except ValueError:
+            raise SpecificationError("Only width integers are supported "
+                "at this time for field types. To use a custom field type "
+                "use a tuple. Found %r" % width)
+
+    return name, width
+
 def spec_from_repr(rep):
     """
+    XXX:TODO This isn't used anywhere now. Delete?
+
     Specifications create field lists and conversion maps for Layout objects
     and convert().
 
@@ -131,13 +207,11 @@ def spec_from_repr(rep):
             convert_map.append((name, field_type))
     return Dict(key_map, convert_map)
 
-def atom_to_spec(atom):
+def atom_to_scalar(atom):
     if isinstance(atom, Spec):
         return atom
     elif isinstance(atom, int):
         return Scalar(atom)
-    elif hasattr(atom, 'width'):
-        return atom
     elif isinstance(atom, basestring) and re.match("^\d+$", atom):
         return Scalar(int(atom))
     else:
