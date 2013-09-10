@@ -6,18 +6,16 @@ from .numeric import Integer, Numeric, NumericFormatError
 
 class IntegerTestCase(unittest.TestCase):
     def test_integer_conversion(self):
-        trec = {'x': '12', 'y': '50', 'color': 'red'}
         rtype = Dict([
             ('x', Integer(3)),
             ('y', Integer(3))
          ])
-        rec = rtype.from_text(trec)
+        rec = rtype.unpack(" 12 50")
         self.assertEquals(rec['x'], 12)
         self.assertEquals(rec['y'], 50)
 
         rec['x'] = 20
-        trec = rtype.to_text(rec)
-        self.assertEquals(trec['x'], '020')
+        self.assertEquals(rec.pack(), "020050")
 
 class NumericTestCase(unittest.TestCase):
     def test_conversion(self):
@@ -32,19 +30,19 @@ class NumericTestCase(unittest.TestCase):
 
         # reading some text off of disk
         text = "100101550000525"
-        rec = line_item.unpack(text).from_text()
+        rec = line_item.unpack(text)
 
         # the text was a little short, but that's ok
-        self.assertFalse(rec.convert_errors())
+        #self.assertFalse(rec.convert_errors())
 
         # do some computation to the record and write it
         # back to disk
         rec['total'] = rec['price'] + rec['sales_tax']
-        new_text = rec.to_text().pack()
+        new_text = rec.pack()
 
         # Let's read the newly stored record and be sure the
         # computed total was saved correctly
-        new_rec = line_item.unpack(new_text).from_text()
+        new_rec = line_item.unpack(new_text)
         self.assertEquals(new_rec['total'], rec['total'])
 
     def test_width(self):
