@@ -16,13 +16,13 @@ class Integer(Spec):
         try:
             return int(text.strip())
         except ValueError:
-            raise ConvertError('%r is not an integer' % text)
+            return ConvertError('expecting all digits for integer', text)
 
     def to_text(self, value):
         text = str(value)
         if len(text) > self.width:
-            raise ConvertError('Cannot fit %r into text of width %d' % 
-                (text, self.width))
+            msg = 'Cannot fit into text of width %d' % self.width
+            return ConvertError(msg, text)
         elif len(text) < self.width:
             return text.rjust(self.width, self.pad)
         else:
@@ -53,18 +53,22 @@ class Numeric(Spec):
         text_input = StringIO(text)
         decimal_input = StringIO()
         for converter in self._converters:
-            converter.write_decimal_input(text_input, decimal_input)
+            err = converter.write_decimal_input(text_input, decimal_input)
+            if err:
+                return ConvertError(err, text)
         try:
             return decimal.Decimal(decimal_input.getvalue())
         except decimal.InvalidOperation, e:
-            raise ConvertError(e)
+            return ConvertError(e, text)
 
     def to_text(self, value):
         text = self._precision_fmt % value
         buf = StringIO(text[::-1])
         out = StringIO()
         for converter in reversed(self._converters):
-            converter.write_output_text(buf, out)
+            err = converter.write_output_text(buf, out)
+            if err:
+                return ConvertError(err, text)
         return out.getvalue()[::-1]
 
     def _compute_precision(self):
@@ -156,7 +160,7 @@ class VConverter(object):
     def write_output_text(self, inp, outp):
         v = inp.read(1)
         if v != ".":
-            raise ConvertError("Excepted '.' found %r" % v)
+            return "Excepted '.' found %r" % v
 
 class DECIMALConverter(object):
     width = property(lambda s: 1)
@@ -164,13 +168,13 @@ class DECIMALConverter(object):
     def write_decimal_input(self, inp, outp):
         v = inp.read(1)
         if v != ".":
-            raise ConvertError("Excepted '.' found %r" % v)
+            return "Excepted '.' found %r" % v
         outp.write(".")
 
     def write_output_text(self, inp, outp):
         v = inp.read(1)
         if v != ".":
-            raise ConvertError("Excepted '.' found %r" % v)
+            return "Excepted '.' found %r" % v
         outp.write(".")
 
 class COMMAConverter(object):
@@ -179,7 +183,7 @@ class COMMAConverter(object):
     def write_decimal_input(self, inp, outp):
         v = inp.read(1)
         if v != ",":
-            raise ConvertError("Excepted ',' found %r" % v)
+            return "Excepted ',' found %r" % v
 
     def write_output_text(self, inp, outp):
         outp.write(",")
@@ -203,7 +207,7 @@ class NINEConverter(object):
     def write_decimal_input(self, inp, outp):
         inv = inp.read(self._count)
         if not self._matcher.match(inv):
-            raise ConvertError("Expected %s digits. Found %r" % (self._count, inv))
+            return "Expected %s digits. Found %r" % (self._count, inv)
         outp.write(inv.replace(" ", "0"))
 
     def write_output_text(self, inp, outp):
@@ -213,9 +217,8 @@ class NINEConverter(object):
         # need to process this backwards
         bytes = inp.read(self.width)
         if not re.match("^\d*$", bytes):
-            raise ConvertError("Found non numeric data %r in value" % bytes)
+            return "Found non numeric data %r in value" % bytes
         if len(bytes) != self.width:
             bytes = bytes.ljust(self.width, "0")
         outp.write(bytes)
-
 
