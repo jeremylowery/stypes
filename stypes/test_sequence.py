@@ -1,6 +1,6 @@
 import unittest
 from .sequence import Array, List, Tuple, NamedTuple
-from .spec import Scalar
+from .spec import String
 from .numeric import Integer
 from .util import UnconvertedValue
 
@@ -16,7 +16,7 @@ class ListTestCase(unittest.TestCase):
         self.assertEquals(value.pack(), string)
 
     def test_atom(self):
-        spec = List([Scalar(3), 1, 1])
+        spec = List([String(3), 1, 1])
         v = spec.unpack("")
         self.assertEquals(v.pack(), ' '*5)
 
@@ -49,11 +49,11 @@ class ListTestCase(unittest.TestCase):
         self.assertEquals(value, [40])
 
     def test_nested_array(self):
-        spec = List([Scalar(12),
-                        Scalar(15),
-                        Scalar(1),
-                        Scalar(3),
-                        Array(3, Scalar(4))])
+        spec = List([String(12),
+                        String(15),
+                        String(1),
+                        String(3),
+                        Array(3, String(4))])
         string = "jeremy      lowery         s031000100020003"
         value = spec.unpack(string)
         expected = ['jeremy', 'lowery', 's', '031', ['0001', '0002', '0003']]

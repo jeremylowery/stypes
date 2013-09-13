@@ -3,14 +3,14 @@ import unittest
 from .mapping import Dict, OrderedDict
 from .numeric import Integer, Numeric, NumericFormatError
 from .sequence import Array
-from .spec import Scalar
+from .spec import String
 
 class OrderedDictTestCase(unittest.TestCase):
     def setUp(self):
         self._spec = OrderedDict([
-            ('first_name', Scalar(12)),
-            ('last_name',  Scalar(15)),
-            ('middle_initial', Scalar(1)),
+            ('first_name', String(12)),
+            ('last_name',  String(15)),
+            ('middle_initial', String(1)),
             ('age', Integer(3)),
             ('colors', Array(3, Integer(4)))])
 
@@ -88,9 +88,9 @@ class NDictTestCase(unittest.TestCase):
 class DictTestCase(unittest.TestCase):
     def setUp(self):
         self._spec = Dict([
-            ('first_name', Scalar(12)),
-            ('last_name',  Scalar(15)),
-            ('middle_initial', Scalar(1)),
+            ('first_name', String(12)),
+            ('last_name',  String(15)),
+            ('middle_initial', String(1)),
             ('age', Integer(3)),
             ('colors', Array(3, Integer(4)))])
 
@@ -117,11 +117,11 @@ class DictTestCase(unittest.TestCase):
 
     def test_unpack_with_explicit_type_spec(self):
         spec = Dict([
-            ('first_name', Scalar(12)),
-            ('last_name',  Scalar(15)),
-            ('middle_initial', Scalar(1)),
-            ('age', Scalar(3)),
-            ('colors', Array(3, Scalar(4)))])
+            ('first_name', String(12)),
+            ('last_name',  String(15)),
+            ('middle_initial', String(1)),
+            ('age', String(3)),
+            ('colors', Array(3, String(4)))])
         inp = "jeremy      lowery         s031000100020003"
         rec = spec.unpack(inp)
         self.assertEquals(rec['first_name'], 'jeremy')

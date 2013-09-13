@@ -40,7 +40,7 @@ import collections
 import string
 import re
 
-__all__ = ['SpecificationError', 'spec_from_repr', 'Spec', 'Scalar',
+__all__ = ['SpecificationError', 'spec_from_repr', 'Spec', 'String',
            'atom_to_scalar', 'atom_to_spec_map', 'atom_to_spec_seq']
 
 class SpecificationError(Exception):
@@ -59,7 +59,7 @@ class Spec(object):
         """ Given a value object, return a text string representation """
         return value[:self.width].ljust(self.width)
 
-class Scalar(Spec):
+class String(Spec):
     def __init__(self, width):
         self.width = width
 
@@ -148,9 +148,9 @@ def spec_from_repr(rep):
     Each field can be of the following forms.
     
     "field" | ("field",)
-        Scalar size 1
+        String size 1
     "field:width" => ("field", width)
-        Scalar size "width"
+        String size "width"
     "field[count]" | (("field", count), 1) 
         Array size 1 with "count" elements
     "field[count]:width"  | (("field", count), width) 
@@ -178,7 +178,7 @@ def spec_from_repr(rep):
         if isinstance(field, int):
             if field < 1:
                 raise SpecificationError("width must be larger than 0 not %r" % field)
-            field_type = Scalar(field)
+            field_type = String(field)
         elif isinstance(field, (list, tuple)):
             # subrecord
             field_type = spec_from_repr(field)
@@ -211,9 +211,9 @@ def atom_to_scalar(atom):
     if isinstance(atom, Spec):
         return atom
     elif isinstance(atom, int):
-        return Scalar(atom)
+        return String(atom)
     elif isinstance(atom, basestring) and re.match("^\d+$", atom):
-        return Scalar(int(atom))
+        return String(int(atom))
     else:
         raise SpecificationError("Expecting specification, int or object "
                 "with width. Got %r" % atom)
