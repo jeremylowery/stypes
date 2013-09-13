@@ -31,16 +31,15 @@ records and actually updating a record.
 
 ```python
 from stypes import Array, Dict, Integer, Numeric
-spec = Dict([
+item = Dict([('line_no', Integer(2)),
+	('item_no', Integer(5)),
+	('total', Numeric("999.99"))])
+invoice = Dict([
     ('invoice_no', Integer(4)),
     ('total', Numeric("999.99")),
-    ('items', Array(3, Dict([
-	('line_no', Integer(2)),
-	('item_no', Integer(5)),
-	('total', Numeric("999.99"))
-	])))])
+    ('items', Array(3, item))])
 text = "0001200.450100004002.000200006198.50"
-rec = spec.unpack(inv)
+rec = invoice.unpack(inv)
 # rec is now
   {'invoice_no': 1,
    'items': [{'item_no': 4, 'line_no': 1, 'total': Decimal('2.00')},
