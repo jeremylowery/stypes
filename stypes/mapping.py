@@ -4,13 +4,14 @@ import re
 import struct
 import string
 
-from .util import OrderedDict as _OrderedDict, ConvertError
+from .util import OrderedDict as _OrderedDict
 from .spec import Spec, atom_to_spec_map
 from .sequence import Array
 
 class _BaseDict(Spec):
-    """ Abstract Base Class for Dict Types. Provided only for implementation inheritance.
-    At the time of the writing, the only variation is the type of the value class
+    """ Abstract Base Class for Dict Types. Provided only for implementation
+    inheritance.  At the time of the writing, the only variation is the type of
+    the value class
     """
 
     _value_type = None

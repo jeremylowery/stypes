@@ -1,13 +1,13 @@
 
 __all__ = ['unpack', 'pack', 'from_text', 'to_text', 'spec', 'Integer',
-           'Scalar', 'Record', 'Array', 'List', 'Tuple', 'ConvertError',
+           'Scalar', 'Record', 'Array', 'List', 'Tuple', 'UnconvertedValue',
            'NamedTuple', 'SpecificationError', 'NumericFormatError', 'Numeric']
 
 from .mapping import Dict, OrderedDict
 from .sequence import Array, List, Tuple, NamedTuple
 from .numeric import Integer, Numeric, NumericFormatError
 from .spec import SpecificationError, Scalar, Spec
-from .util import ConvertError
+from .util import UnconvertedValue
 
 ## Layout Entry Points
 def unpack(string, spec):

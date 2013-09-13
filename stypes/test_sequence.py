@@ -2,7 +2,7 @@ import unittest
 from .sequence import Array, List, Tuple, NamedTuple
 from .spec import Scalar
 from .numeric import Integer
-from .util import ConvertError
+from .util import UnconvertedValue
 
 class ListTestCase(unittest.TestCase):
 
@@ -132,7 +132,7 @@ class NamedTupleTestCase(unittest.TestCase):
     def test_bad_data(self):
         buf = "jeremy      lowery         sX23"
         tup = self._spec.unpack(buf)
-        self.assertEquals(type(tup.age), ConvertError)
+        self.assertEquals(type(tup.age), UnconvertedValue)
 
 if __name__ == '__main__': 
     unittest.main()

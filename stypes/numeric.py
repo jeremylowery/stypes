@@ -5,7 +5,7 @@ import re
 from cStringIO import StringIO
 
 from .spec import Spec
-from .util import ConvertError
+from .util import UnconvertedValue
 
 class Integer(Spec):
     def __init__(self, width, pad='0'):
@@ -19,7 +19,7 @@ class Integer(Spec):
         try:
             return int(text.strip())
         except ValueError:
-            return ConvertError('expecting all digits for integer', text)
+            return UnconvertedValue(text, 'expecting all digits for integer')
 
     def to_text(self, value):
         if value is None:
@@ -28,7 +28,7 @@ class Integer(Spec):
             text = str(value)
         if len(text) > self.width:
             msg = 'Cannot fit into text of width %d' % self.width
-            return ConvertError(msg, text)
+            return UnconvertedValue(text, msg)
         elif len(text) < self.width:
             return text.rjust(self.width, self.pad)
         else:
@@ -63,11 +63,11 @@ class Numeric(Spec):
         for converter in self._converters:
             err = converter.write_decimal_input(text_input, decimal_input)
             if err:
-                return ConvertError(err, text)
+                return UnconvertedValue(text, err)
         try:
             return decimal.Decimal(decimal_input.getvalue())
         except decimal.InvalidOperation, e:
-            return ConvertError(e, text)
+            return UnconvertedValue(text, err)
 
     def to_text(self, value):
         if value is None:
@@ -78,7 +78,7 @@ class Numeric(Spec):
         for converter in reversed(self._converters):
             err = converter.write_output_text(buf, out)
             if err:
-                return ConvertError(err, text)
+                return UnconvertedValue(text, err)
         return out.getvalue()[::-1]
 
     def _compute_precision(self):

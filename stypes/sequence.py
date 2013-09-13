@@ -1,15 +1,11 @@
 
 import collections
 import copy
-import functools
 import re
 import string
 import struct
-import sys
 
-from .spec import Spec, atom_to_spec_seq, atom_to_scalar, atom_to_spec_map
-
-from .util import OrderedDict, ConvertError
+from .spec import Spec, atom_to_spec_seq, atom_to_spec_map
 
 class BaseSequence(Spec):
     _itype = None
