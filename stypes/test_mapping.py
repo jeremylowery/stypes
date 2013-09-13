@@ -6,40 +6,84 @@ from .sequence import Array
 from .spec import Scalar
 
 class OrderedDictTestCase(unittest.TestCase):
-    def test_mainline(self):
-        spec = OrderedDict([
+    def setUp(self):
+        self._spec = OrderedDict([
             ('first_name', Scalar(12)),
             ('last_name',  Scalar(15)),
             ('middle_initial', Scalar(1)),
-            ('age', Scalar(3)),
+            ('age', Integer(3)),
             ('colors', Array(3, Integer(4)))])
+
+    def test_mainline(self):
         inp = "jeremy      lowery         s031000100020003"
-        rec = spec.unpack(inp)
+        rec = self._spec.unpack(inp)
         self.assertEquals(rec['first_name'], 'jeremy')
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
-        self.assertEquals(rec['age'], '031')
+        self.assertEquals(rec['age'], 31)
         self.assertEquals(rec['colors'], [1, 2, 3])
         self.assertEquals(rec.items(), [
             ('first_name', 'jeremy'),
             ('last_name', 'lowery'),
             ('middle_initial', 's'),
-            ('age', '031'),
+            ('age', 31),
             ('colors', [1, 2, 3])
         ])
 
         self.assertEquals(rec.pack(), inp)
 
+    def test_update(self):
+        inp = "jeremy      lowery         s031000100020003"
+        rec = self._spec.unpack(inp)
+        rec['last_name'] = 'smith'
+        outp = "jeremy      smith          s031000100020003"
+        self.assertEquals(rec.pack(), outp)
+        try:
+            del rec['last_name']
+            self.assertTrue(False, 'deleting did not raise TypeError')
+        except TypeError:
+            pass
+
+        try:
+            rec.clear()
+            self.assertTrue(False, 'clearing did not raise TypeError')
+        except TypeError:
+            pass
+
+        rec.update({'age': '35', 'colors': ['2', '4', '3']})
+        out = 'jeremy      smith          s035000200040003'
+        self.assertEquals(rec.pack(), out)
+
 class NDictTestCase(unittest.TestCase):
-    def test_foobar(self):
-        spec = Dict([
+    def setUp(self):
+        self._spec = Dict([
             ('first_name', 12),
             ('last_name',  15),
             ('middle_initial', 1),
             ('age', Integer(3))])
+
+    def test_foobar(self):
         inp = "jeremy      lowery         s031"
-        rec = spec.unpack(inp)
+        rec = self._spec.unpack(inp)
         self.assertEquals(rec['age'], 31)
+
+    def test_update(self):
+        inp = "jeremy      lowery         s031000100020003"
+        outp ="jeremy      smith          s031"
+        rec = self._spec.unpack(inp)
+        rec['last_name'] = 'smith'
+        self.assertEquals(rec.pack(), outp)
+        try:
+            del rec['last_name']
+            self.assertTrue(False, 'deleting did not raise TypeError')
+        except TypeError:
+            pass
+
+        try:
+            rec.clear()
+            self.assertTrue(False, 'clearing did not raise TypeError')
+        except TypeError:
+            pass
 
 class DictTestCase(unittest.TestCase):
     def setUp(self):
