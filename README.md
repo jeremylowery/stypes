@@ -64,7 +64,7 @@ print rec.pack()
 
 You can install stypes using pip
 ```bash
-pip insatll stypes
+pip install stypes
 ```
 
 or download from PyPI at https://pypi.python.org/pypi/stypes/
