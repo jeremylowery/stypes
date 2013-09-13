@@ -7,6 +7,13 @@ import stypes as st
 
 class APITestCase(unittest.TestCase):
     """ Tests using the public package interface """
+    def test_unconverted_value(self):
+        x = st.UnconvertedValue('as', 'not an integer')
+        self.assertFalse(x)
+        s = "<UnconvertedValue string='as' reason='not an integer'>"
+        self.assertEquals(repr(x), s)
+        self.assertEquals(str(x), "as: not an integer")
+
     def test_readme1(self):
         from decimal import Decimal
         from stypes import NamedTuple, Integer, Numeric

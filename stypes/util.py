@@ -10,6 +10,16 @@ class UnconvertedValue(object):
         self.string = string
         self.reason = reason
 
+    def __nonzero__(self):
+        return False
+
+    def __str__(self):
+        return "%s: %s" % (self.string, self.reason)
+
+    def __repr__(self):
+        return '<UnconvertedValue string=%r reason=%r>' % (self.string,
+                self.reason)
+
 class imemoize(object):
     """cache the return value of a method
     
