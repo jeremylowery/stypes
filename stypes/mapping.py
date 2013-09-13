@@ -4,7 +4,7 @@ import re
 import struct
 import string
 
-from .util import OrderedDict as _OrderedDict
+from .util import UnconvertedValue, OrderedDict as _OrderedDict
 from .spec import Spec, atom_to_spec_map
 from .sequence import Array
 
@@ -52,7 +52,12 @@ class _BaseDict(Spec):
 
     ## pack
     def pack(self, rec):
-        value = [rec.get(n, None) for n, s in self._spec_map]
+        try:
+            value = [rec[n] for n, s in self._spec_map]
+        except KeyError, e:
+            err = "Specification requires value to have a %r key" % e.args
+            raise KeyError(err)
+
         if not self._to_str_funs:
             return ''.join(s(v) for s, v in zip(self._pack_funs, value))
 
@@ -76,7 +81,19 @@ class _BaseDict(Spec):
     def _struct_fmt(self):
         return ''.join('%ds' % f.width for name, f in self._spec_map)
 
-class DictValue(dict):
+class _UnconvertedMappingValueMixIn(object):
+    def has_unconverted(self):
+        return any(isinstance(s, UnconvertedValue) for s in self.values())
+
+    def unconverted_report(self):
+        lines = []
+        for key, value in self.items():
+            if not isinstance(value, UnconvertedValue):
+                continue
+            lines.append("Field %s - %s" % (key, value))
+        return "\n".join(lines)
+
+class DictValue(dict, _UnconvertedMappingValueMixIn):
     def __init__(self, values, spec):
         dict.__init__(self, values)
         self._spec = spec
@@ -114,7 +131,7 @@ class DictValue(dict):
 class Dict(_BaseDict):
     _value_type = DictValue
 
-class OrderedDictValue(_OrderedDict):
+class OrderedDictValue(_OrderedDict, _UnconvertedMappingValueMixIn):
     def __init__(self, values, spec):
         self._spec = spec
         _OrderedDict.__init__(self, values)

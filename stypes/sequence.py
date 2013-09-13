@@ -6,6 +6,7 @@ import string
 import struct
 
 from .spec import Spec, atom_to_spec_seq, atom_to_spec_map
+from .util import UnconvertedValue
 
 class BaseSequence(Spec):
     _itype = None
@@ -100,6 +101,17 @@ class _NamedTupleValue(object):
     def as_strings(self):
         return self._spec.as_strings(self)
 
+class _UnconvertedSequenceValueMixIn(object):
+    def has_unconverted(self):
+        return any(isinstance(s, UnconvertedValue) for s in self)
+
+    def unconverted_report(self):
+        lines = []
+        for idx, value in enumerate(self):
+            if not isinstance(s, UnconvertedValue):
+                continue
+            lines.append("Index %d: %s" % (idx, value))
+        return "\n".join(lines)
 ## Tuple
 class Tuple(BaseSequence):
     def __init__(self, *a, **k):
@@ -107,7 +119,7 @@ class Tuple(BaseSequence):
         self._str_itype = tuple
         BaseSequence.__init__(self, *a, **k)
 
-class _TupleValue(tuple):
+class _TupleValue(tuple, _UnconvertedSequenceValueMixIn):
     def __new__(cls, other, spec, convert_errors=None):
         inst = tuple.__new__(cls, other)
         inst._spec = spec
@@ -152,7 +164,7 @@ class Array(List):
         self._pack_funs = [p.pack for p in self._pos_specs]
         self._struct = struct.Struct(self._struct_fmt)
 
-class _ListValue(list):
+class _ListValue(list, _UnconvertedSequenceValueMixIn):
     def __init__(self, other, spec):
         list.__init__(self, other)
         self._spec = spec
@@ -221,5 +233,4 @@ class _ListValue(list):
     ## stypes Protocol
     def pack(self):
         return self._spec.pack(self)
-
 
