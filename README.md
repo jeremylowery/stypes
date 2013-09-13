@@ -1,6 +1,8 @@
 Rich Type Library for Textual Data
 ==================================
 
+**WARNING: This is alpha software and the interface is likely to change.**
+
 stypes is a text parsing, conversion and formatting library written to
 efficiently handle large fixed-width text record data files. Convert text
 streams into dictionaries, lists, tuples, named tuples, ordered dictionaries
