@@ -13,13 +13,19 @@ class Integer(Spec):
         self.pad = pad
 
     def from_text(self, text):
+        clean = text.strip()
+        if not clean:
+            return None
         try:
             return int(text.strip())
         except ValueError:
             return ConvertError('expecting all digits for integer', text)
 
     def to_text(self, value):
-        text = str(value)
+        if value is None:
+            text = ''
+        else:
+            text = str(value)
         if len(text) > self.width:
             msg = 'Cannot fit into text of width %d' % self.width
             return ConvertError(msg, text)
