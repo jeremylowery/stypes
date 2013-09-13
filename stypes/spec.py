@@ -40,8 +40,10 @@ import collections
 import string
 import re
 
+from util import UnconvertedValue
 __all__ = ['SpecificationError', 'spec_from_repr', 'Spec', 'String',
-           'atom_to_scalar', 'atom_to_spec_map', 'atom_to_spec_seq']
+           'MappedString', 'atom_to_scalar', 'atom_to_spec_map',
+           'atom_to_spec_seq']
 
 class SpecificationError(Exception):
     pass
@@ -62,6 +64,19 @@ class Spec(object):
 class String(Spec):
     def __init__(self, width):
         self.width = width
+
+class MappedString(Spec):
+    def __init__(self, width, smap):
+        self._smap = smap
+        self.width = width
+
+    def from_text(self, text):
+        try:
+            return self._smap[text]
+        except KeyError:
+            valid_strings = ', '.join(self._smap.keys())
+            return UnconvertedValue(text, 'Expected one of: %s' % valid_strings)
+
 
 def tokenize_lines(r):
     """ break apart a full string representation into a list. useful for
