@@ -5,7 +5,7 @@ import re
 from cStringIO import StringIO
 
 from .spec import Spec
-from .util import UnconvertedValue
+from .util import UnconvertedValue, InvalidSpecError
 
 class Integer(Spec):
     def __init__(self, width, pad='0'):
@@ -34,7 +34,7 @@ class Integer(Spec):
         else:
             return text
 
-class NumericFormatError(Exception):
+class NumericFormatError(InvalidSpecError):
     pass
 
 class Numeric(Spec):

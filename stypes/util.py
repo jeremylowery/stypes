@@ -5,6 +5,9 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
+class InvalidSpecError(Exception):
+    pass
+
 class UnconvertedValue(object):
     def __init__(self, string, reason):
         self.string = string
