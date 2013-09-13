@@ -54,6 +54,8 @@ class Numeric(Spec):
         self._width = sum(c.width for c in self._converters)
 
     def from_text(self, text):
+        if not text.strip():
+            return None
         if len(text) != self._width:
             text = text.rjust(self._width)
         text_input = StringIO(text)
@@ -68,6 +70,8 @@ class Numeric(Spec):
             return ConvertError(e, text)
 
     def to_text(self, value):
+        if value is None:
+            return ' '*self._width
         text = self._precision_fmt % value
         buf = StringIO(text[::-1])
         out = StringIO()
