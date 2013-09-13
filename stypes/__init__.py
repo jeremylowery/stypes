@@ -6,7 +6,7 @@ __all__ = ['unpack', 'pack', 'from_text', 'to_text', 'spec', 'Integer',
 from .date import Date, Datetime
 from .mapping import Dict
 try:
-    from .mapping import OrderedDict
+    from .odict import OrderedDict
 except ImportError:
     pass
 from .numeric import Integer, Numeric, NumericFormatError
