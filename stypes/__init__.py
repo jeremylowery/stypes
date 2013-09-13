@@ -4,7 +4,11 @@ __all__ = ['unpack', 'pack', 'from_text', 'to_text', 'spec', 'Integer',
            'NamedTuple', 'SpecificationError', 'NumericFormatError', 'Numeric']
 
 from .date import Date, Datetime
-from .mapping import Dict, OrderedDict
+from .mapping import Dict
+try:
+    from .mapping import OrderedDict
+except ImportError:
+    pass
 from .numeric import Integer, Numeric, NumericFormatError
 from .sequence import Array, List, Tuple, NamedTuple
 from .spec import SpecificationError, String, Spec, MappedString

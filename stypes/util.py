@@ -1,10 +1,5 @@
 from functools import partial
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
-
 class InvalidSpecError(Exception):
     pass
 

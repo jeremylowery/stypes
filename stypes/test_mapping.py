@@ -1,6 +1,7 @@
 import unittest
 
-from .mapping import Dict, OrderedDict
+from .mapping import Dict
+from .odict import OrderedDict
 from .numeric import Integer, Numeric, NumericFormatError
 from .sequence import Array
 from .spec import String
