@@ -23,7 +23,6 @@ class _BaseDict(Spec):
         self._setup_from_str_funs()
         self._setup_to_str_funs()
 
-    ## Layout Responsibility
     @property
     def width(self):
         return sum(s.width for name, s in self._spec_map)
@@ -88,6 +87,19 @@ class DictValue(dict):
     def __deepcopy__(self, memo):
         rec = type(self)(self, self._spec)
         return rec
+
+    ## dict protocol
+    def __setitem__(self, key, str_value):
+        if not isinstance(str_value, basestring):
+            return dict.__setitem__(self, key, str_value)
+        
+        for fun_key, fun in self._spec._from_str_funs:
+            if fun_key == key:
+                value = fun(str_value)
+                break
+        else:
+            value = str_value
+        dict.__setitem__(self, key, value)
 
     def pack(self):
         return self._spec.pack(self)

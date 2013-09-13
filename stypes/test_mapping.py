@@ -42,20 +42,37 @@ class NDictTestCase(unittest.TestCase):
         self.assertEquals(rec['age'], 31)
 
 class DictTestCase(unittest.TestCase):
-    def test_mainline(self):
-        spec = Dict([
+    def setUp(self):
+        self._spec = Dict([
             ('first_name', Scalar(12)),
             ('last_name',  Scalar(15)),
             ('middle_initial', Scalar(1)),
-            ('age', Scalar(3)),
+            ('age', Integer(3)),
             ('colors', Array(3, Integer(4)))])
+
+    def test_mainline(self):
         inp = "jeremy      lowery         s031000100020003"
-        rec = spec.unpack(inp)
+        rec = self._spec.unpack(inp)
         self.assertEquals(rec['first_name'], 'jeremy')
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
-        self.assertEquals(rec['age'], '031')
+        self.assertEquals(rec['age'], 31)
         self.assertEquals(rec['colors'], [1, 2, 3])
+
+    def test_assignment(self):
+        inp = "jeremy      lowery         s031000100020003"
+        rec = self._spec.unpack(inp)
+        rec['last_name'] = 'smith'
+        rec['age'] = 30
+        outp = 'jeremy      smith          s030000100020003'
+        self.assertEquals(rec.pack(), outp)
+
+    def test_sublist_assignment(self):
+        rec = self._spec.unpack('')
+        print type(rec['colors'])
+        rec['colors'][:] = '123'
+        print rec['colors']
+        print rec.pack()
 
     def test_unpack_with_explicit_type_spec(self):
         spec = Dict([
@@ -81,7 +98,6 @@ class DictTestCase(unittest.TestCase):
         ])
         inp = "jeremy      lowery         s"
         rec = spec.unpack(inp)
-        self.assertFalse(rec.convert_errors())
         self.assertEquals(rec['first_name'], 'jeremy')
         self.assertEquals(rec['last_name'], 'lowery')
         self.assertEquals(rec['middle_initial'], 's')
