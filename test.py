@@ -20,6 +20,34 @@ class APITestCase(unittest.TestCase):
         self.assertEquals(rec.age, 21)
         self.assertEquals(rec.weight, Decimal("97.5"))
 
+    def test_readme2(self):
+        from stypes import Array, Dict, Integer, Numeric
+        spec = Dict([
+            ('invoice_no', Integer(4)),
+            ('total', Numeric("999.99")),
+            ('items', Array(3, Dict([
+                ('line_no', Integer(2)),
+                ('item_no', Integer(5)),
+                ('total', Numeric("999.99"))
+                ])))])
+        inv = "0001200.450100004002.000200006198.50"
+        rec = spec.unpack(inv)
+        self.assertEquals(rec, 
+            {'invoice_no': 1,
+             'items': [{'item_no': 4, 'line_no': 1, 'total': Decimal('2.00')},
+                       {'item_no': 6, 'line_no': 2, 'total': Decimal('198.50')},
+                       {'item_no': None, 'line_no': None, 'total': None}],
+             'total': Decimal('200.45')})
+
+        rec['items'][-1] = {
+            'line_no': 3,
+            'item_no': 10,
+            'total': Decimal("20")}
+
+        rec['total'] = sum(i['total'] for i in rec['items'])
+        self.assertEquals(rec.pack(),
+            '0001220.500100004002.000200006198.500300010020.00')
+
     def test_from_unpack_usage(self):
         layout = [
             ('first_name', 12),
