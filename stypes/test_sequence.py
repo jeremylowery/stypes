@@ -1,4 +1,3 @@
-
 import unittest
 from .sequence import Array, List, Tuple, NamedTuple
 from .spec import Scalar
@@ -28,8 +27,6 @@ class ListTestCase(unittest.TestCase):
         self.assertEquals(v[1], "X")
         v[2:4] = ["Y", "Z"]
         self.assertEquals(v, ["", "X", "Y", "Z", ""])
-        v[::2] = "A"
-        self.assertEquals(v, ['A', 'X', 'A', 'Z', 'A'])
 
     def test_assign(self):
         spec = List([12, 15, 1, Integer(3)])
@@ -61,6 +58,34 @@ class ListTestCase(unittest.TestCase):
         value = spec.unpack(string)
         expected = ['jeremy', 'lowery', 's', '031', ['0001', '0002', '0003']]
         self.assertEquals(value, expected)
+
+    def test_sub_assignment(self):
+        mint = Integer(1)
+        spec = List([mint, mint, List([mint, mint, mint])])
+        s = spec.unpack('')
+        self.assertEquals(s, [None, None, [None, None, None]])
+
+        s[:2] = ['3', '4']
+        self.assertEquals(s[:2], [3, 4])
+
+        s[2][0] = '1'
+        self.assertEquals(s[2], [1, None, None])
+
+        s[2][:] = ['9', '8', '70']
+        self.assertEquals(s, [3, 4, [9, 8, 70]])
+
+        try:
+            s[2][:] = [1, 2, 3, 4, 5, 6]
+            self.assertTrue(False, 'Attempted to change size of list with : slice')
+        except TypeError:
+            pass
+
+        try:
+            s[2][:] = [1, 2]
+            self.assertTrue(False, 'Attempted to change size of list with : slice')
+        except TypeError:
+            pass
+
 
 class TupleTestCase(unittest.TestCase):
     def test_mainline(self):

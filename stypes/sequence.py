@@ -5,6 +5,7 @@ import functools
 import re
 import string
 import struct
+import sys
 
 from .spec import Spec, atom_to_spec_seq, atom_to_scalar, atom_to_spec_map
 
@@ -157,16 +158,26 @@ class _ListValue(list):
         return rec
 
     ## List Protocol
-    def __setitem__(self, index, str_value):
-        if not isinstance(str_value, basestring):
-            return list.__setitem__(self, index, str_value)
-        
+    def __setslice__(self, start, end, sublist):
+        start, end = max(start, 0), max(end, 0)
+        if end > len(self):
+            # Possibly a [:] or [idx:] slice
+            if len(sublist) != len(self) - start:
+                raise TypeError('Cannot change size of list with slice')
+            end = len(self) + 1
+        for idx, item in zip(range(start, end), sublist):
+            self.__setitem__(idx, item)
+
+    def __setitem__(self, index, values):
         if isinstance(index, slice):
             indexes = range(*index.indices(len(self)))
+            if len(values) != len(indexes):
+                raise TypeError('Cannot change size of list with slice')
         else:
             indexes = [index]
+            values = [values]
         
-        for index in indexes:
+        for index, str_value in zip(indexes, values):
             for fun_index, fun in self._spec._from_str_funs:
                 if fun_index == index:
                     value = fun(str_value)
@@ -176,6 +187,9 @@ class _ListValue(list):
             list.__setitem__(self, index, value)
 
     def __delitem__(self, index):
+        raise TypeError("stype lists cannot change size")
+
+    def __delslice__(self, index):
         raise TypeError("stype lists cannot change size")
 
     def append(self, value):
