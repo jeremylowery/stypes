@@ -17,7 +17,7 @@ class UnconvertedValue(object):
         return False
 
     def __str__(self):
-        return "%s: %s" % (self.string, self.reason)
+        return "%s, given=%r" % (self.reason, self.string)
 
     def __repr__(self):
         return '<UnconvertedValue string=%r reason=%r>' % (self.string,
