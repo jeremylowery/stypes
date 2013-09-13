@@ -69,10 +69,7 @@ class DictTestCase(unittest.TestCase):
 
     def test_sublist_assignment(self):
         rec = self._spec.unpack('')
-        print type(rec['colors'])
         rec['colors'][:] = '123'
-        print rec['colors']
-        print rec.pack()
 
     def test_unpack_with_explicit_type_spec(self):
         spec = Dict([

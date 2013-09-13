@@ -144,6 +144,18 @@ class List(BaseSequence):
         self._itype = _ListValue
         BaseSequence.__init__(self, *a, **k)
 
+class Array(List):
+    def __init__(self, count, spec):
+        self._str_itype = list
+        self._itype = _ListValue
+        self._count = count
+        self._pos_specs = [spec] * count
+        self._setup_from_str_funs()
+        self._setup_to_str_funs()
+        self._unpack_funs = [p.unpack for p in self._pos_specs]
+        self._pack_funs = [p.pack for p in self._pos_specs]
+        self._struct = struct.Struct(self._struct_fmt)
+
 class _ListValue(list):
     def __init__(self, other, spec):
         list.__init__(self, other)
@@ -213,48 +225,5 @@ class _ListValue(list):
     ## stypes Protocol
     def pack(self):
         return self._spec.pack(self)
-
-## Array
-class Array(Spec):
-    """ Homogenous list """
-    def __init__(self, count, spec):
-        self._count = count
-        self._spec = atom_to_scalar(spec)
-        self._struct = struct.Struct(self._struct_fmt)
-
-        if hasattr(self._spec, 'from_text'):
-            self._from_str_fun = self._spec.from_text
-        else:
-            self._from_str_fun = None
-
-        if hasattr(self._spec, 'to_text'):
-            self._to_str_fun = self._spec.to_text
-        else:
-            self._to_str_fun = None
-
-    @property
-    def width(self):
-        return self._count * self._spec.width
-
-    @property
-    def _struct_fmt(self):
-        return ('%ds' % self._spec.width)  * self._count
-
-    def unpack(self, text_line):
-        try:
-            values = self._struct.unpack_from(text_line)
-        except struct.error:
-            # pad the line out so that struct will take it
-            values = self._struct.unpack_from(text_line.ljust(self.width))
-        
-        values = map(self._spec.unpack, values)
-        if self._from_str_fun:
-            values = map(self._from_str_fun, values)
-        return _ListValue(values, self)
-
-    def pack(self, values):
-        if self._to_str_fun:
-            values = map(self._to_str_fun, values)
-        return ''.join(map(self._spec.pack, values))
 
 
