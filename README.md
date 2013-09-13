@@ -59,3 +59,10 @@ print rec.pack()
 # '0001220.500100004002.000200006198.500300010020.00'
 
 ```
+
+You can install stypes using pip
+```bash
+pip insatll stypes
+```
+
+or download from PyPI at https://pypi.python.org/pypi/stypes/
