@@ -231,7 +231,7 @@ def atom_to_scalar(atom):
         return String(int(atom))
     else:
         raise SpecificationError("Expecting specification, int or object "
-                "with width. Got %r" % atom)
+                "with width. Got %r" % (atom,))
 
 def _isconverter(obj):
     return hasattr(obj, 'to_text') and hasattr(obj, 'from_text')
