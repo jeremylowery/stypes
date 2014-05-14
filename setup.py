@@ -2,7 +2,12 @@
 from distutils.core import setup
 from stypes.version import get_version
 
+## broken difference between markdown and rst. These patterns
+## blow up python setup.py register
 long_description = open("README.md").read()
+long_description = long_description.replace('```python', '::')
+long_description = long_description.replace('```bash', '::')
+long_description = long_description.replace('```', '\n')
 
 setup(
     name='stypes',
