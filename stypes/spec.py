@@ -65,6 +65,29 @@ class String(Spec):
     def __init__(self, width):
         self.width = width
 
+class BoxedString(Spec):
+    def __init__(self, size, count, sep='\r\n'):
+        self.size = size
+        self.count = count
+        self.width = size * count
+        self.sep = sep
+
+    def to_text(self, text):
+        lines = []
+        data = text.split(self.sep)
+        for i in range(self.count):
+            try:
+                line = data[i]
+            except IndexError:
+                line = ''
+            line = line[:self.size].ljust(self.size)
+            lines.append(line)
+        return "".join(lines)
+
+    def from_text(self, text):
+        lines = [text[x:x+self.size] for x in range(0,len(text), self.size)]
+        return self.sep.join(lines)
+
 class MappedString(Spec):
     def __init__(self, width, smap):
         self._smap = smap
