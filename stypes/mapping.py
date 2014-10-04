@@ -26,10 +26,12 @@ class _BaseDict(Spec):
 
     @property
     def width(self):
+        """ The width of the dictionary record as text """
         return sum(s.width for name, s in self._spec_map)
 
     ## unpack
     def unpack(self, text_line):
+        """ Convert the given byte text into a python mapping """
         try:
             values = self._struct.unpack_from(text_line)
         except struct.error:
@@ -86,6 +88,8 @@ class _UnconvertedMappingValueMixIn(object):
         return any(isinstance(s, UnconvertedValue) for s in self.values())
 
     def unconverted_report(self):
+        """ Debugging report that shows all of the values in the mapping
+        which were unable to be converted. """
         lines = []
         for key, value in self.items():
             if not isinstance(value, UnconvertedValue):
