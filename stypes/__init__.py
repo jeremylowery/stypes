@@ -11,7 +11,7 @@ except ImportError:
     pass
 from .numeric import Integer, Numeric, NumericFormatError
 from .sequence import Array, List, Tuple, NamedTuple
-from .spec import SpecificationError, String, Spec, MappedString
+from .spec import SpecificationError, String, Spec, MappedString, BoxedString
 from .util import UnconvertedValue
 
 ## Layout Entry Points
