@@ -7,7 +7,7 @@ long_description = open("README.md").read()
 setup(
     name='stypes',
     version=get_version('short'),
-    description='rich type library for textual data records',
+    description='Encode and Decode Textual Data into Rich Python Data Structures',
     long_description=long_description,
     provides=['stypes'],
     packages=['stypes'],
@@ -16,7 +16,7 @@ setup(
     url="http://github.com/jeremylowery/stypes",
 
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: MIT License',

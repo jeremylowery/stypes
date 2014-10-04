@@ -1,12 +1,11 @@
-Rich Type Library for Textual Data
-==================================
-
-**WARNING: This is alpha software and the interface is likely to change.**
+Encode and Decode Textual Data into Rich Python Data Structures
+===============================================================
 
 stypes is a text parsing, conversion and formatting library written to
 efficiently handle large fixed-width text record data files. Convert text
 streams into dictionaries, lists, tuples, named tuples, ordered dictionaries
-and more using text layout specifications.
+and more using text layout specifications. Nested data structures and
+repeating elements are also supported.
 
 One of the main design goals of the library was to handle legacy text-based
 record data that is commonly found in COBOL system. Of course, the library
@@ -61,6 +60,8 @@ print rec.pack()
 # '0001220.500100004002.000200006198.500300010020.00'
 
 ```
+
+See the included tests.py file for more examples.
 
 You can install stypes using pip
 ```bash
