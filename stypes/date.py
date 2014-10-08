@@ -14,7 +14,7 @@ class Date(Spec):
     def width(self):
         return self._width
 
-    def from_text(self, text):
+    def from_bytes(self, text):
         if not text.strip():
             return None
         try:
@@ -24,7 +24,7 @@ class Date(Spec):
             
         return datetime.date(*(t[:3]))
 
-    def to_text(self, value):
+    def to_bytes(self, value):
         if value is None:
             return ' '*self.width
         return value.strftime(self._fmt)
@@ -38,7 +38,7 @@ class Datetime(Spec):
     def width(self):
         return self._width
 
-    def from_text(self, text):
+    def from_bytes(self, text):
         if not text.strip():
             return None
         try:
@@ -47,7 +47,7 @@ class Datetime(Spec):
             return UnconvertedValue(text, 'expected date in format %r' % self._fmt)
         return datetime.datetime(*(t[:6]))
 
-    def to_text(self, value):
+    def to_bytes(self, value):
         if value is None:
             return ' '*self.width
         return value.strftime(self._fmt)

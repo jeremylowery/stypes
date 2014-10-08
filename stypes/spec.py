@@ -72,7 +72,7 @@ class BoxedString(Spec):
         self.width = size * count
         self.sep = sep
 
-    def to_text(self, text):
+    def to_bytes(self, text):
         lines = []
         data = text.split(self.sep)
         for i in range(self.count):
@@ -84,7 +84,7 @@ class BoxedString(Spec):
             lines.append(line)
         return "".join(lines)
 
-    def from_text(self, text):
+    def from_bytes(self, text):
         lines = [text[x:x+self.size] for x in range(0,len(text), self.size)]
         return self.sep.join(lines)
 
@@ -93,7 +93,7 @@ class MappedString(Spec):
         self._smap = smap
         self.width = width
 
-    def from_text(self, text):
+    def from_bytes(self, text):
         try:
             return self._smap[text]
         except KeyError:
@@ -257,7 +257,7 @@ def atom_to_scalar(atom):
                 "with width. Got %r" % (atom,))
 
 def _isconverter(obj):
-    return hasattr(obj, 'to_text') and hasattr(obj, 'from_text')
+    return hasattr(obj, 'to_bytes') and hasattr(obj, 'from_bytes')
 
 def _split_field_layout(layout):
     if isinstance(layout, basestring):

@@ -12,7 +12,7 @@ class Integer(Spec):
         self.width = width
         self.pad = pad
 
-    def from_text(self, text):
+    def from_bytes(self, text):
         clean = text.strip()
         if not clean:
             return None
@@ -21,7 +21,7 @@ class Integer(Spec):
         except ValueError:
             return UnconvertedValue(text, 'expecting all digits for integer')
 
-    def to_text(self, value):
+    def to_bytes(self, value):
         if value is None:
             text = ''
         else:
@@ -53,7 +53,7 @@ class Numeric(Spec):
         self._compute_precision()
         self._width = sum(c.width for c in self._converters)
 
-    def from_text(self, text):
+    def from_bytes(self, text):
         if not text.strip():
             return None
         if len(text) != self._width:
@@ -69,7 +69,7 @@ class Numeric(Spec):
         except decimal.InvalidOperation, e:
             return UnconvertedValue(text, err)
 
-    def to_text(self, value):
+    def to_bytes(self, value):
         if value is None:
             return ' '*self._width
         text = self._precision_fmt % value

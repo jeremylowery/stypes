@@ -47,8 +47,8 @@ class _BaseDict(Spec):
         # Functions to call when we convert from a string to a value
         self._from_str_funs = []
         for idx, (name, spec) in enumerate(self._spec_map):
-            if hasattr(spec, 'from_text'):
-                self._from_str_funs.append((idx, spec.from_text))
+            if hasattr(spec, 'from_bytes'):
+                self._from_str_funs.append((idx, spec.from_bytes))
 
     ## pack
     def pack(self, rec):
@@ -69,8 +69,8 @@ class _BaseDict(Spec):
         # Functions to call when we convert from a value to a string
         self._to_str_funs = []
         for idx, (name, spec) in enumerate(self._spec_map):
-            if hasattr(spec, 'to_text'):
-                self._to_str_funs.append((idx, spec.to_text))
+            if hasattr(spec, 'to_bytes'):
+                self._to_str_funs.append((idx, spec.to_bytes))
 
     ## Private
     @property

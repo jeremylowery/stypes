@@ -1,7 +1,7 @@
 
-__all__ = ['unpack', 'pack', 'from_text', 'to_text', 'spec', 'Integer',
-           'String', 'Record', 'Array', 'List', 'Tuple', 'UnconvertedValue',
-           'NamedTuple', 'SpecificationError', 'NumericFormatError', 'Numeric']
+__all__ = ['unpack', 'pack',  'spec', 'Integer', 'String', 'Record', 'Array',
+'List', 'Tuple', 'UnconvertedValue', 'NamedTuple', 'SpecificationError',
+'NumericFormatError', 'Numeric']
 
 from .date import Date, Datetime
 from .mapping import Dict

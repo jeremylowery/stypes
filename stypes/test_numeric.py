@@ -54,9 +54,9 @@ class NumericTestCase(unittest.TestCase):
         test("9(4)V99",6)
         test("9(4).9(3)", 8)
         
-    def test_from_text(self):
+    def test_from_bytes(self):
         def test(nfmt, inp, outp):
-            self.assertEquals(Numeric(nfmt).from_text(inp), Decimal(outp))
+            self.assertEquals(Numeric(nfmt).from_bytes(inp), Decimal(outp))
 
         test("999V99", "00025", ".25")
         test("999.99", "  2.25", "2.25")
@@ -64,10 +64,10 @@ class NumericTestCase(unittest.TestCase):
         test("9(4)V99", "030054", "300.54")
         test("9(4).9(3)", "0300.054", "300.054")
 
-    def test_to_text(self):
+    def test_to_bytes(self):
         def test(nfmt, inp, outp):
             f = Numeric(nfmt)
-            self.assertEquals(f.to_text(Decimal(inp)), outp)
+            self.assertEquals(f.to_bytes(Decimal(inp)), outp)
         test("999V99",  ".25", "00025")
         test("999.99",  "2.25", "002.25")
         test("9,999",  "1234", "1,234")
