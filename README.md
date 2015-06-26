@@ -63,6 +63,36 @@ print rec.pack()
 
 See the included tests.py file for more examples.
 
+Errors in Data
+------------------------------------
+stypes takes the approach that errors in the textual data are not exceptions.
+Data errors are to be expected and should be handled in the normal flow of the
+program.
+
+stypes includes the notion of an UnconvertedValue. When parsing text that cannot be
+deserialized into the destination format, an UnconvertedValue instance is placed in
+it's place. All container objects have a has_unconverted() method which allows
+client code to easily detect if there was an error.
+
+```python
+fmt = List([Numeric('99V9'), Integer(4)])
+rec = fmt.unpack("44X001A")
+print rec
+[<UnconvertedValue string='44X' reason="Expected 1 digits. Found 'X'">,
+ <UnconvertedValue string='001A' reason='expecting all digits for integer'>]
+
+assert rec.has_unconverted() == True
+
+print rec[0].reason
+ "Expected 1 digits. Found 'X'"
+
+print rec[1].reason
+ 'expecting all digits for integer'
+```
+
+Installation
+------------------------
+
 You can install stypes using pip
 ```bash
 pip install stypes
