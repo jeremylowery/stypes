@@ -134,5 +134,10 @@ class NamedTupleTestCase(unittest.TestCase):
         tup = self._spec.unpack(buf)
         self.assertEquals(type(tup.age), UnconvertedValue)
 
+    def test_has_unconverted(self):
+        buf = "jeremy      lowery         sX23"
+        tup = self._spec.unpack(buf)
+        self.assertEquals(tup.has_unconverted(), True)
+        
 if __name__ == '__main__': 
     unittest.main()

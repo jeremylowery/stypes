@@ -78,29 +78,6 @@ class BaseSequence(Spec):
             if hasattr(spec, 'to_bytes'):
                 self._to_str_funs.append((idx, spec.to_bytes))
 
-## NamedTuple
-class NamedTuple(BaseSequence):
-    def __init__(self, key_map=()):
-        self._key_map = atom_to_spec_map(key_map)
-        self._field_names = [n for n, c in self._key_map]
-        self._str_itype = collections.namedtuple('BaseNamedTuple', self._field_names)
-        self._itype = type('NamedTupleValue', (_NamedTupleValue, self._str_itype), {})
-
-        pos_specs = [c for n, c in self._key_map]
-        BaseSequence.__init__(self, pos_specs)
-
-class _NamedTupleValue(object):
-    def __new__(cls, value, spec):
-        i = cls.__bases__[1].__new__(cls, *value)
-        i._spec = spec
-        return i
-
-    def pack(self):
-        return self._spec.pack(self)
-
-    def as_strings(self):
-        return self._spec.as_strings(self)
-
 class _UnconvertedSequenceValueMixIn(object):
     def has_unconverted(self):
         return any(isinstance(s, UnconvertedValue) for s in self)
@@ -112,6 +89,30 @@ class _UnconvertedSequenceValueMixIn(object):
                 continue
             lines.append("Index %d: %s" % (idx, value))
         return "\n".join(lines)
+
+## NamedTuple
+class NamedTuple(BaseSequence):
+    def __init__(self, key_map=()):
+        self._key_map = atom_to_spec_map(key_map)
+        self._field_names = [n for n, c in self._key_map]
+        self._str_itype = collections.namedtuple('BaseNamedTuple', self._field_names)
+        self._itype = type('NamedTupleValue', (_NamedTupleValue, self._str_itype), {})
+
+        pos_specs = [c for n, c in self._key_map]
+        BaseSequence.__init__(self, pos_specs)
+
+class _NamedTupleValue(_UnconvertedSequenceValueMixIn):
+    def __new__(cls, value, spec):
+        i = cls.__bases__[1].__new__(cls, *value)
+        i._spec = spec
+        return i
+
+    def pack(self):
+        return self._spec.pack(self)
+
+    def as_strings(self):
+        return self._spec.as_strings(self)
+
 ## Tuple
 class Tuple(BaseSequence):
     def __init__(self, *a, **k):
