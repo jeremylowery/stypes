@@ -85,7 +85,7 @@ class _UnconvertedSequenceValueMixIn(object):
     def unconverted_report(self):
         lines = []
         for idx, value in enumerate(self):
-            if not isinstance(s, UnconvertedValue):
+            if not isinstance(value, UnconvertedValue):
                 continue
             lines.append("Index %d: %s" % (idx, value))
         return "\n".join(lines)

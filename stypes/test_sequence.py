@@ -138,6 +138,11 @@ class NamedTupleTestCase(unittest.TestCase):
         buf = "jeremy      lowery         sX23"
         tup = self._spec.unpack(buf)
         self.assertEquals(tup.has_unconverted(), True)
+
+    def test_unconverted_report(self):
+        buf = "jeremy      lowery         sX23"
+        tup = self._spec.unpack(buf)
+        self.assertEquals(tup.unconverted_report(), "Index 3: expecting all digits for integer, given='X23'")
         
 if __name__ == '__main__': 
     unittest.main()
