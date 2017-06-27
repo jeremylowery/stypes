@@ -59,22 +59,27 @@ class Numeric(Spec):
         if len(text) != self._width:
             text = text.rjust(self._width)
         text_input = StringIO(text)
-        decimal_input = StringIO()
+        decimal_input = ConvertState()
         for converter in self._converters:
             err = converter.write_decimal_input(text_input, decimal_input)
             if err:
                 return UnconvertedValue(text, err)
         try:
-            return decimal.Decimal(decimal_input.getvalue())
+            v = decimal.Decimal(decimal_input.getvalue())
+            return v if decimal_input.positive else -v
         except decimal.InvalidOperation, e:
             return UnconvertedValue(text, err)
 
     def to_bytes(self, value):
         if value is None:
             return ' '*self._width
-        text = self._precision_fmt % value
-        buf = StringIO(text[::-1])
+        text = self._precision_fmt % abs(value)
+        buf = ConvertState(text[::-1])
+        if value < 0:
+            buf.positive = False
         out = StringIO()
+
+        #print self._fspec, value, buf.getvalue(), self._precision_fmt, list(reversed(self._converters))
         for converter in reversed(self._converters):
             err = converter.write_output_text(buf, out)
             if err:
@@ -90,9 +95,11 @@ class Numeric(Spec):
             # find a decimal point
             if isinstance(c, (VConverter, DECIMALConverter)):
                 adding = True
+            elif isinstance(c, (VConverter, SIGNConverter)):
+                pass
             # add all the numbers past it
             elif adding:
-                prec += c.width 
+                prec += c.width
         self._precision_fmt = "%." + str(prec) + "f"
 
     def _build_convert_procs(self):
@@ -100,6 +107,7 @@ class Numeric(Spec):
         paren_digits = ''
         symbols = list(self._fspec)
         state = 'START'
+        has_sign = False
         DIGIT = re.compile("\d")
         for position, symbol in enumerate(self._fspec):
             position += 1
@@ -113,6 +121,12 @@ class Numeric(Spec):
                     self._converters.append(COMMAConverter())
                 elif symbol == 'V':
                     self._converters.append(VConverter())
+                elif symbol == 'S':
+                    if has_sign:
+                        raise NumericFormatError("Unexpected sign at "
+                            "position %s. Only one S allowed." % position)
+                    has_sign = True
+                    self._converters.append(SIGNConverter())
                 elif symbol == ' ':
                     self._converters.append(SPACEConverter())
                 else:
@@ -136,6 +150,15 @@ class Numeric(Spec):
                     self._converters.append(VConverter())
                     nine_count = 0
                     state = 'START'
+                elif symbol == 'S':
+                    if has_sign:
+                        raise NumericFormatError("Unexpected sign at "
+                            "position %s. Only one S allowed." % position)
+                    has_sign = True
+                    self._converters.append(NINEConverter(nine_count))
+                    self._converters.append(SIGNConverter())
+                    nine_count = 0
+                    state = 'START'
                 elif symbol == '(':
                     state = 'LPAREN'
                 else:
@@ -156,13 +179,34 @@ class Numeric(Spec):
                 else:
                     raise NumericFormatError("Unexpected character %r at "
                         "position %s" % (symbol, position))
-        if state == 'NINE':        
+        if state == 'NINE':
             self._converters.append(NINEConverter(nine_count))
         elif state == 'LPAREN':
             raise NumericFormatError("Unexpected end of input. expected )")
 
+class ConvertState(object):
+    """ We need a stateful object to keep track of whether the number is
+    positive or negative. If we could, we we've just added an attribute to the
+    StringIO buffer.
+    """
+    def __init__(self, iv=None):
+        if iv is None:
+            self.buf = StringIO()
+        else:
+            self.buf = StringIO(iv)
+        self.positive = True
+    def read(self, n):
+        return self.buf.read(n)
+    def write(self, v):
+        self.buf.write(v)
+    def getvalue(self):
+        return self.buf.getvalue()
+
 class VConverter(object):
     width = property(lambda s: 0)
+
+    def __repr__(self):
+        return "V"
 
     def write_decimal_input(self, inp, outp):
         outp.write(".")
@@ -172,8 +216,30 @@ class VConverter(object):
         if v != ".":
             return "Excepted '.' found %r" % v
 
+class SIGNConverter(object):
+    width = property(lambda s: 1)
+
+    def __repr__(self):
+        return "S"
+
+    def write_decimal_input(self, inp, outp):
+        v = inp.read(1)
+        if v == "-":
+            outp.positive = False
+        else:
+            outp.positive = True
+
+    def write_output_text(self, inp, outp):
+        if inp.positive:
+            outp.write(" ")
+        else:
+            outp.write("-")
+
 class DECIMALConverter(object):
     width = property(lambda s: 1)
+
+    def __repr__(self):
+        return "."
 
     def write_decimal_input(self, inp, outp):
         v = inp.read(1)
@@ -190,6 +256,9 @@ class DECIMALConverter(object):
 class COMMAConverter(object):
     width = property(lambda s: 1)
 
+    def __repr__(self):
+        return ","
+
     def write_decimal_input(self, inp, outp):
         v = inp.read(1)
         if v != ",":
@@ -199,6 +268,9 @@ class COMMAConverter(object):
         outp.write(",")
 
 class SPACEConverter(object):
+    def __repr__(self):
+        return "_"
+
     width = property(lambda s: 1)
     def write_decimal_input(self, inp, outp):
         """ We ignore whatever is in the input on a space """
@@ -213,6 +285,9 @@ class NINEConverter(object):
     def __init__(self, count):
         self._count = count
         self._matcher = re.compile("[ \d]{%s}" % count)
+
+    def __repr__(self):
+        return "9(%d)" % self.width
 
     def write_decimal_input(self, inp, outp):
         inv = inp.read(self._count)

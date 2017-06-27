@@ -33,7 +33,7 @@ class NumericTestCase(unittest.TestCase):
         rec = line_item.unpack(text)
 
         # the text was a little short, but that's ok
-        #self.assertFalse(rec.convert_errors())
+        self.assertFalse(rec.has_unconverted())
 
         # do some computation to the record and write it
         # back to disk
@@ -53,7 +53,7 @@ class NumericTestCase(unittest.TestCase):
         test("9,999",  5)
         test("9(4)V99",6)
         test("9(4).9(3)", 8)
-        
+
     def test_from_bytes(self):
         def test(nfmt, inp, outp):
             self.assertEquals(Numeric(nfmt).from_bytes(inp), Decimal(outp))
@@ -63,6 +63,10 @@ class NumericTestCase(unittest.TestCase):
         test("9,999", "1,234", "1234")
         test("9(4)V99", "030054", "300.54")
         test("9(4).9(3)", "0300.054", "300.054")
+
+        test("S999.99", "   2.25", "2.25")
+        test("S999.99", "-  2.25", "-2.25")
+        test("999.99S", "  2.25-", "-2.25")
 
     def test_to_bytes(self):
         def test(nfmt, inp, outp):
@@ -78,11 +82,21 @@ class NumericTestCase(unittest.TestCase):
         # Overflow
         test("999.99",  "1000", "000.00")
 
+        test("S999.99", "2.25",  " 002.25")
+        test("S999.99", "-2.25", "-002.25")
+        test("999.99S", "-2.25", "002.25-")
+
     def test_invalid_pack(self):
         def test(*a):
             self.assertRaises(NumericFormatError, Numeric, *a)
         test("(4")
         test("asdf")
         #test("99.99.")
+
+    def test_invalid_sign(self):
+        def test(*a):
+            self.assertRaises(NumericFormatError, Numeric, *a)
+        test("SS")
+        test("9(S")
 
 if __name__ == '__main__': unittest.main()

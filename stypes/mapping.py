@@ -65,6 +65,9 @@ class _BaseDict(Spec):
 
         for idx, to_str in self._to_str_funs:
             value[idx] = to_str(value[idx])
+            if isinstance(value[idx], UnconvertedValue):
+                return value[idx]
+
         return ''.join(s(v) for s, v in zip(self._pack_funs, value))
 
     def _setup_to_str_funs(self):
