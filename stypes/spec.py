@@ -65,6 +65,12 @@ class String(Spec):
     def __init__(self, width):
         self.width = width
 
+    def to_bytes(self, text):
+        if text is None:
+            return self.width * " "
+        else:
+            return text
+
 class BoxedString(Spec):
     def __init__(self, size, count, sep='\r\n'):
         self.size = size
