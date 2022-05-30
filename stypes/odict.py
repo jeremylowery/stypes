@@ -1,4 +1,5 @@
 
+from past.builtins import basestring
 try:
     from collections import OrderedDict as _OrderedDict
 except ImportError:
@@ -24,20 +25,20 @@ class OrderedDictValue(_OrderedDict, _UnconvertedMappingValueMixIn):
         return rec
 
     def update(self, other):
-        for key, value in other.items():
+        for key, value in list(other.items()):
             self.__setitem__(key, value)
 
-    def __setitem__(self, key, str_value):
-        if not isinstance(str_value, basestring):
-            return _OrderedDict.__setitem__(self, key, str_value)
-        
-        for fun_key, fun in self._spec._from_str_funs:
-            if fun_key == key:
-                value = fun(str_value)
-                break
-        else:
-            value = str_value
-        _OrderedDict.__setitem__(self, key, value)
+#    def __setitem__(self, key, str_value):
+#        if not isinstance(str_value, basestring):
+#            return _OrderedDict.__setitem__(self, key, str_value)
+#        
+#        for fun_key, fun in self._spec._from_str_funs:
+#            if fun_key == key:
+#                value = fun(str_value)
+#                break
+#        else:
+#            value = str_value
+#        _OrderedDict.__setitem__(self, key, value)
 
     def __delitem__(self, key):
         raise TypeError("values cannot be removed from stype dicts")

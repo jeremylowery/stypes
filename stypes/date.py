@@ -18,16 +18,16 @@ class Date(Spec):
         if not text.strip():
             return None
         try:
-            t = time.strptime(text, self._fmt)
+            t = time.strptime(text.decode(), self._fmt)
         except ValueError:
             return UnconvertedValue(text, 'expected date in format %r' % self._fmt)
-            
+
         return datetime.date(*(t[:3]))
 
     def to_bytes(self, value):
         if value is None:
             return ' '*self.width
-        return value.strftime(self._fmt)
+        return value.strftime(self._fmt).encode()
 
 class Datetime(Spec):
     def __init__(self, fmt):
@@ -42,7 +42,7 @@ class Datetime(Spec):
         if not text.strip():
             return None
         try:
-            t = time.strptime(text, self._fmt)
+            t = time.strptime(text.decode(), self._fmt)
         except ValueError:
             return UnconvertedValue(text, 'expected date in format %r' % self._fmt)
         return datetime.datetime(*(t[:6]))
@@ -50,14 +50,14 @@ class Datetime(Spec):
     def to_bytes(self, value):
         if value is None:
             return ' '*self.width
-        return value.strftime(self._fmt)
+        return value.strftime(self._fmt).encode()
 
 def _formatter_width(fmt):
     formatters = re.findall("%.", fmt)
     fixed_chars = re.sub("%.", "", fmt)
     try:
         width = sum(_formatter_width_map[x] for x in formatters)
-    except KeyError, e:
+    except KeyError as e:
         raise InvalidSpecError("Invalid formatter %s. Perhaps variable length" % e.args)
     return width + len(fixed_chars)
 

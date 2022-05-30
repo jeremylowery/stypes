@@ -1,7 +1,10 @@
-
-from cStringIO import StringIO
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from six import StringIO
 from decimal import Decimal
 import unittest
+from  io import BytesIO
 
 import stypes as st
 
@@ -11,8 +14,8 @@ class APITestCase(unittest.TestCase):
         x = st.UnconvertedValue('as', 'not an integer')
         self.assertFalse(x)
         s = "<UnconvertedValue string='as' reason='not an integer'>"
-        self.assertEquals(repr(x), s)
-        self.assertEquals(str(x), "not an integer, given='as'")
+        self.assertEqual(repr(x), s)
+        self.assertEqual(str(x), "not an integer, given='as'")
 
     def test_readme1(self):
         from decimal import Decimal
@@ -21,11 +24,11 @@ class APITestCase(unittest.TestCase):
             ('name', 10),
             ('age', Integer(3)),
             ('weight', Numeric('999V99'))])
-        text = "Johnson    2109750"
+        text = b"Johnson    2109750"
         rec = spec.unpack(text)
-        self.assertEquals(rec.name, 'Johnson')
-        self.assertEquals(rec.age, 21)
-        self.assertEquals(rec.weight, Decimal("97.5"))
+        self.assertEqual(rec.name, 'Johnson')
+        self.assertEqual(rec.age, 21)
+        self.assertEqual(rec.weight, Decimal("97.5"))
 
     def test_readme2(self):
         from stypes import Array, Dict, Integer, Numeric
@@ -37,9 +40,9 @@ class APITestCase(unittest.TestCase):
                 ('item_no', Integer(5)),
                 ('total', Numeric("999.99"))
                 ])))])
-        inv = "0001200.450100004002.000200006198.50"
+        inv = b"0001200.450100004002.000200006198.50"
         rec = spec.unpack(inv)
-        self.assertEquals(rec, 
+        self.assertEqual(rec, 
             {'invoice_no': 1,
              'items': [{'item_no': 4, 'line_no': 1, 'total': Decimal('2.00')},
                        {'item_no': 6, 'line_no': 2, 'total': Decimal('198.50')},
@@ -52,8 +55,8 @@ class APITestCase(unittest.TestCase):
             'total': Decimal("20")}
 
         rec['total'] = sum(i['total'] for i in rec['items'])
-        self.assertEquals(rec.pack(),
-            '0001220.500100004002.000200006198.500300010020.00')
+        self.assertEqual(rec.pack(),
+            b'0001220.500100004002.000200006198.500300010020.00')
 
     def test_from_unpack_usage(self):
         layout = [
@@ -62,12 +65,12 @@ class APITestCase(unittest.TestCase):
             ('middle_initial', 1),
             ('age', 3)
         ]
-        inp = "jeremy      lowery         s"
+        inp = b"jeremy      lowery         s"
         rec = st.unpack(inp, layout)
         rec['last_name'] = 'smith'
-        res = "jeremy      smith          s   "
-        self.assertEquals(st.pack(rec, layout), res)
-        self.assertEquals(rec.pack(), res)
+        res = b"jeremy      smith          s   "
+        self.assertEqual(st.pack(rec, layout), res)
+        self.assertEqual(rec.pack(), res)
 
     def test_standalone_usage(self):
         data = {
@@ -85,9 +88,9 @@ class APITestCase(unittest.TestCase):
             ('age', 3),
             ('colors[3]', 4)
             ])
-        
-        inp = "jeremy      lowery         s031000100020003"
-        self.assertEquals(text, inp)
+
+        inp = b"jeremy      lowery         s031000100020003"
+        self.assertEqual(text, inp)
 
     def test_edi_scenario(self):
         infspec = st.Dict([
@@ -114,12 +117,12 @@ class APITestCase(unittest.TestCase):
             ('claim_status', 1)
         ])
 
-        in_file_data = StringIO("""\
+        in_file_data = BytesIO(b"""\
 11D46C058179O                         WC  Cammy       Meyer              F05/21/1934
 11D46C058315O                         WC  Dennis      Tony              EM02/01/1972
 11D46C028315O                         WC  Jimmy       John-Boy          EX11/11/1944
 """)
-        out_file_data = StringIO()
+        out_file_data = BytesIO()
         err_file = StringIO()
         for idx, line in enumerate(in_file_data):
             rec = infspec.unpack(line)
@@ -134,15 +137,15 @@ class APITestCase(unittest.TestCase):
             self.assertRaises(KeyError, outfspec.pack, rec)
             rec['group_nbr'] = '11111111'
             out_file_data.write(outfspec.pack(rec))
-            out_file_data.write("\n")
+            out_file_data.write(b"\n")
 
         err_file.seek(0)
         # two lines of error. one for the record line and one for the field info
-        self.assertEquals(len(list(err_file)), 2)
+        self.assertEqual(len(list(err_file)), 2, err_file.getvalue())
 
         # The output file has two records
-        outr = '1111111111D46C0581719340521MEYER          CAMMY        211D46C058179                   \n1111111111D46C0583119720201TONY           DENNIS      E111D46C058315                   \n'
+        outr = b'1111111111D46C0581719340521MEYER          CAMMY        211D46C058179                   \n1111111111D46C0583119720201TONY           DENNIS      E111D46C058315                   \n'
 
-        self.assertEquals(out_file_data.getvalue(), outr)
+        self.assertEqual(out_file_data.getvalue(), outr)
 
 if __name__ == '__main__': unittest.main()

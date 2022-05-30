@@ -36,11 +36,17 @@ A type specification will be one of the following:
       A sub-specification
 
 """
-import collections
-import string
-import re
+from __future__ import absolute_import
+from builtins import map
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 
-from util import UnconvertedValue
+import collections
+import re
+import six
+
+from .util import UnconvertedValue
 __all__ = ['SpecificationError', 'spec_from_repr', 'Spec', 'String',
            'MappedString', 'atom_to_scalar', 'atom_to_spec_map',
            'atom_to_spec_seq']
@@ -53,13 +59,21 @@ class Spec(object):
     width = 0
 
     def unpack(self, s):
-        """ Given a text string, return a value object for the specification
+        """ Given a byte sequence, return a value object for the specification
         """
-        return s.rstrip()
+        if six.PY3 and isinstance(s, str):
+            s = s.encode()
+        if hasattr(self, 'from_bytes'):
+            return self.from_bytes(s.rstrip())
+        else:
+            return s.decode().rstrip()
 
     def pack(self, value):
-        """ Given a value object, return a text string representation """
-        return value[:self.width].ljust(self.width)
+        """ Given a value object, return a byte representation """
+        if hasattr(self, 'to_bytes'):
+            return self.to_bytes(value)[:self.width].ljust(self.width)
+        else:
+            return value.encode()[:self.width].ljust(self.width)
 
 class String(Spec):
     def __init__(self, width):
@@ -67,9 +81,9 @@ class String(Spec):
 
     def to_bytes(self, text):
         if text is None:
-            return self.width * " "
+            return self.width * b" "
         else:
-            return text
+            return text.encode()
 
 class BoxedString(Spec):
     def __init__(self, size, count, sep='\r\n'):
@@ -86,11 +100,12 @@ class BoxedString(Spec):
                 line = data[i]
             except IndexError:
                 line = ''
-            line = line[:self.size].ljust(self.size)
+            line = line[:self.size].ljust(self.size).encode()
             lines.append(line)
-        return "".join(lines)
+        return b"".join(lines)
 
     def from_bytes(self, text):
+        text = text.decode()
         lines = [text[x:x+self.size] for x in range(0,len(text), self.size)]
         return self.sep.join(lines)
 
@@ -100,22 +115,23 @@ class MappedString(Spec):
         self.width = width
 
     def from_bytes(self, text):
+        text = text.decode()
         try:
             return self._smap[text]
         except KeyError:
-            valid_strings = ', '.join(self._smap.keys())
+            valid_strings = ', '.join(list(self._smap.keys()))
             return UnconvertedValue(text, 'Expected one of: %s' % valid_strings)
 
 
 def tokenize_lines(r):
     """ break apart a full string representation into a list. useful for
     mappings and sequences """
-    return map(string.strip, r.split(";"))
+    return [v.strip() for v in r.split(";")]
 
 def atom_to_spec_seq(specs):
     if isinstance(specs, basestring):
         specs = tokenize_lines(specs)
-    return map(atom_to_scalar, specs)
+    return list(map(atom_to_scalar, specs))
 
 _AR_FNAME = re.compile(r"^([A-Za-z0-9_-]+)\S*\[(\d+)\]\S*")
 def atom_to_spec_map(rep):
@@ -149,10 +165,9 @@ def atom_to_spec_map(rep):
 
 def _split_key_spec(spec):
     if isinstance(spec, basestring):
-        if ":" in spec:
-            name, width = map(string.strip, spec.split(":", 1))
-        else:
-            name, width = spec, "1"
+        name, _, width = spec.partition(":")
+        name = name.strip()
+        width = width.strip() if width else "1"
     elif isinstance(spec, collections.Sequence):
         if len(spec) > 1:
             name, width = spec[:2]
@@ -214,10 +229,10 @@ def spec_from_repr(rep):
     convert_map = []
     if isinstance(rep, basestring):
         # XXX:TODO Field for subrecords, will have to have a stateful unpackr
-        rep = map(string.strip, rep.split(";"))
+        rep = [v.strip() for v in rep.split(";")]
     for fieldspec in rep:
         name, field = _split_field_layout(fieldspec)
-        
+
         # Figure out the field type
         if isinstance(field, int):
             if field < 1:
@@ -267,10 +282,9 @@ def _isconverter(obj):
 
 def _split_field_layout(layout):
     if isinstance(layout, basestring):
-        if ":" in layout:
-            name, width = map(string.strip, layout.split(":", 1))
-        else:
-            name, width = layout, "1"
+        name, _, width = layout.partition(":")
+        name = name.strip()
+        width = width.strip() if width else "1"
     elif isinstance(layout, collections.Sequence):
         if len(layout) > 1:
             name, width = layout[:2]

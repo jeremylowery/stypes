@@ -1,8 +1,13 @@
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import decimal
+import io
 import re
 
-from cStringIO import StringIO
+from six import StringIO
 
 from .spec import Spec
 from .util import UnconvertedValue, InvalidSpecError
@@ -23,14 +28,14 @@ class Integer(Spec):
 
     def to_bytes(self, value):
         if value is None:
-            text = ''
+            text = b''
         else:
-            text = str(value)
+            text = str(value).encode()
         if len(text) > self.width:
             msg = 'Cannot fit into text of width %d' % self.width
             return UnconvertedValue(text, msg)
         elif len(text) < self.width:
-            return text.rjust(self.width, self.pad)
+            return text.rjust(self.width, self.pad.encode())
         else:
             return text
 
@@ -56,6 +61,7 @@ class Numeric(Spec):
     def from_bytes(self, text):
         if not text.strip():
             return None
+        text = text.decode()
         if len(text) != self._width:
             text = text.rjust(self._width)
         text_input = StringIO(text)
@@ -67,7 +73,7 @@ class Numeric(Spec):
         try:
             v = decimal.Decimal(decimal_input.getvalue())
             return v if decimal_input.positive else -v
-        except decimal.InvalidOperation, e:
+        except decimal.InvalidOperation as e:
             return UnconvertedValue(text, err)
 
     def to_bytes(self, value):
@@ -84,7 +90,7 @@ class Numeric(Spec):
             err = converter.write_output_text(buf, out)
             if err:
                 return UnconvertedValue(text, err)
-        return out.getvalue()[::-1]
+        return out.getvalue()[::-1].encode()
 
     def _compute_precision(self):
         """ The precision of the numeric value. We have to have this so when

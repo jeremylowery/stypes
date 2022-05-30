@@ -1,3 +1,4 @@
+from builtins import object
 from functools import partial
 
 class InvalidSpecError(Exception):
@@ -8,7 +9,7 @@ class UnconvertedValue(object):
         self.string = string
         self.reason = reason
 
-    def __nonzero__(self):
+    def __bool__(self):
         return False
 
     def __str__(self):
@@ -51,7 +52,7 @@ class imemoize(object):
             cache = obj.__cache
         except AttributeError:
             cache = obj.__cache = {}
-        key = (self.func, args[1:], frozenset(kw.items()))
+        key = (self.func, args[1:], frozenset(list(kw.items())))
         try:
             res = cache[key]
         except KeyError:

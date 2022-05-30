@@ -8,14 +8,15 @@ class DateTestCase(unittest.TestCase):
         self._s =  BoxedString(5, 2)
 
     def test_to_bytes(self):
-        self.assertEquals(self._s.to_bytes("aaaaa\r\nbbbbb"), "aaaaabbbbb")
+        self.assertEqual(self._s.to_bytes("aaaaa\r\nbbbbb"), b"aaaaabbbbb")
 
     def test_to_trunc(self):
-        self.assertEquals(self._s.to_bytes("aaaaavvvvv\r\nbbbbb"), "aaaaabbbbb")
+        self.assertEqual(self._s.to_bytes("aaaaavvvvv\r\nbbbbb"), b"aaaaabbbbb")
 
     def test_width(self):
-        self.assertEquals(self._s.width, 10)
+        self.assertEqual(self._s.width, 10)
 
     def test_from_bytes(self):
-        self.assertEquals(self._s.from_bytes("aaaaabbbbb"), "aaaaa\r\nbbbbb")
+        self.assertEqual(self._s.from_bytes(b"aaaaabbbbb"), "aaaaa\r\nbbbbb")
 
+if __name__ == '__main__': unittest.main()

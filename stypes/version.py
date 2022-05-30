@@ -7,6 +7,8 @@ which in turn needs access to this version inpackion.)
 
 Credit is given to fabric, whose version.py is the basis for this module.
 """
+from __future__ import print_function
+from builtins import str
 from subprocess import Popen, PIPE
 from os.path import abspath, dirname
 

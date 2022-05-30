@@ -10,12 +10,12 @@ class IntegerTestCase(unittest.TestCase):
             ('x', Integer(3)),
             ('y', Integer(3))
          ])
-        rec = rtype.unpack(" 12 50")
-        self.assertEquals(rec['x'], 12)
-        self.assertEquals(rec['y'], 50)
+        rec = rtype.unpack(b" 12 50")
+        self.assertEqual(rec['x'], 12)
+        self.assertEqual(rec['y'], 50)
 
         rec['x'] = 20
-        self.assertEquals(rec.pack(), "020050")
+        self.assertEqual(rec.pack(), b"020050")
 
 class NumericTestCase(unittest.TestCase):
     def test_conversion(self):
@@ -29,7 +29,7 @@ class NumericTestCase(unittest.TestCase):
         ])
 
         # reading some text off of disk
-        text = "100101550000525"
+        text = b"100101550000525"
         rec = line_item.unpack(text)
 
         # the text was a little short, but that's ok
@@ -43,11 +43,11 @@ class NumericTestCase(unittest.TestCase):
         # Let's read the newly stored record and be sure the
         # computed total was saved correctly
         new_rec = line_item.unpack(new_text)
-        self.assertEquals(new_rec['total'], rec['total'])
+        self.assertEqual(new_rec['total'], rec['total'])
 
     def test_width(self):
         def test(nfmt, width):
-            self.assertEquals(Numeric(nfmt).width, width)
+            self.assertEqual(Numeric(nfmt).width, width)
         test("999V99", 5)
         test("999.99", 6)
         test("9,999",  5)
@@ -56,7 +56,7 @@ class NumericTestCase(unittest.TestCase):
 
     def test_from_bytes(self):
         def test(nfmt, inp, outp):
-            self.assertEquals(Numeric(nfmt).from_bytes(inp), Decimal(outp))
+            self.assertEqual(Numeric(nfmt).from_bytes(inp.encode()), Decimal(outp))
 
         test("999V99", "00025", ".25")
         test("999.99", "  2.25", "2.25")
@@ -71,7 +71,7 @@ class NumericTestCase(unittest.TestCase):
     def test_to_bytes(self):
         def test(nfmt, inp, outp):
             f = Numeric(nfmt)
-            self.assertEquals(f.to_bytes(Decimal(inp)), outp)
+            self.assertEqual(f.to_bytes(Decimal(inp)), outp.encode())
         test("999V99",  ".25", "00025")
         test("999.99",  "2.25", "002.25")
         test("9,999",  "1234", "1,234")

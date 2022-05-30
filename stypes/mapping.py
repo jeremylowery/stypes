@@ -1,7 +1,12 @@
+from builtins import zip
+from past.builtins import basestring
+from builtins import object
 import copy
 import collections
+import io
 import re
 import struct
+import six
 import string
 
 from .util import UnconvertedValue
@@ -21,8 +26,8 @@ class _BaseDict(Spec):
         self._unpack_funs = [s.unpack for n, s in self._spec_map]
         self._pack_funs = [s.pack for n, s in self._spec_map]
         self._struct = struct.Struct(self._struct_fmt)
-        self._setup_from_str_funs()
-        self._setup_to_str_funs()
+        self._setup_to_value_funs()
+        self._setup_to_bytes_funs()
 
     @property
     def width(self):
@@ -32,6 +37,10 @@ class _BaseDict(Spec):
     ## unpack
     def unpack(self, text_line):
         """ Convert the given byte text into a python mapping """
+        if six.PY3 and isinstance(text_line, str):
+            text_line = text_line.encode()
+
+        # Turn bytes object into a list of bytes objects
         try:
             values = self._struct.unpack_from(text_line)
         except struct.error:
@@ -39,43 +48,44 @@ class _BaseDict(Spec):
             values = self._struct.unpack_from(text_line.ljust(self.width))
 
         values = [s(v) for s, v in zip(self._unpack_funs, values)]
+        #print([v for _, v in self._to_value_funs])
 
-        for idx, from_str in self._from_str_funs:
-            values[idx] = from_str(values[idx])
+        #for idx, to_value in self._to_value_funs:
+        #    values[idx] = to_value(values[idx])
 
-        return self._value_type(zip(self._keys, values), self)
+        return self._value_type(list(zip(self._keys, values)), self)
 
-    def _setup_from_str_funs(self):
+    def _setup_to_value_funs(self):
         # Functions to call when we convert from a string to a value
-        self._from_str_funs = []
+        self._to_value_funs = []
         for idx, (name, spec) in enumerate(self._spec_map):
             if hasattr(spec, 'from_bytes'):
-                self._from_str_funs.append((idx, spec.from_bytes))
+                self._to_value_funs.append((idx, spec.from_bytes))
 
     ## pack
     def pack(self, rec):
         try:
             value = [rec[n] for n, s in self._spec_map]
-        except KeyError, e:
+        except KeyError as e:
             err = "Specification requires value to have a %r key" % e.args
             raise KeyError(err)
 
-        if not self._to_str_funs:
-            return ''.join(s(v) for s, v in zip(self._pack_funs, value))
+        #if not self._to_bytes_funs:
+        return b''.join(s(v) for s, v in zip(self._pack_funs, value))
 
-        for idx, to_str in self._to_str_funs:
-            value[idx] = to_str(value[idx])
-            if isinstance(value[idx], UnconvertedValue):
-                return value[idx]
+        #for idx, to_bytes in self._to_bytes_funs:
+        #    value[idx] = to_bytes(value[idx])
+        #    if isinstance(value[idx], UnconvertedValue):
+        #        return value[idx]
 
-        return ''.join(s(v) for s, v in zip(self._pack_funs, value))
+        #return b''.join([s(v) for s, v in zip(self._pack_funs, value):])
 
-    def _setup_to_str_funs(self):
+    def _setup_to_bytes_funs(self):
         # Functions to call when we convert from a value to a string
-        self._to_str_funs = []
+        self._to_bytes_funs = []
         for idx, (name, spec) in enumerate(self._spec_map):
             if hasattr(spec, 'to_bytes'):
-                self._to_str_funs.append((idx, spec.to_bytes))
+                self._to_bytes_funs.append((idx, spec.to_bytes))
 
     ## Private
     @property
@@ -88,13 +98,13 @@ class _BaseDict(Spec):
 
 class _UnconvertedMappingValueMixIn(object):
     def has_unconverted(self):
-        return any(isinstance(s, UnconvertedValue) for s in self.values())
+        return any(isinstance(s, UnconvertedValue) for s in list(self.values()))
 
     def unconverted_report(self):
         """ Debugging report that shows all of the values in the mapping
         which were unable to be converted. """
         lines = []
-        for key, value in self.items():
+        for key, value in list(self.items()):
             if not isinstance(value, UnconvertedValue):
                 continue
             lines.append("Field %s - %s" % (key, value))
@@ -118,7 +128,7 @@ class DictValue(dict, _UnconvertedMappingValueMixIn):
         if not isinstance(str_value, basestring):
             return dict.__setitem__(self, key, str_value)
         
-        for fun_key, fun in self._spec._from_str_funs:
+        for fun_key, fun in self._spec._to_value_funs:
             if fun_key == key:
                 value = fun(str_value)
                 break
