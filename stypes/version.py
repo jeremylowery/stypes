@@ -12,7 +12,7 @@ from builtins import str
 from subprocess import Popen, PIPE
 from os.path import abspath, dirname
 
-VERSION = (0, 1, 4, '', 4)
+VERSION = (0, 2, 0, '', 1)
 
 def git_sha():
     loc = abspath(dirname(__file__))
