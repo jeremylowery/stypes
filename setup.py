@@ -1,5 +1,4 @@
 import setuptools
-#from distutils.core import setup
 from stypes.version import get_version
 
 long_description = open("README.md").read()

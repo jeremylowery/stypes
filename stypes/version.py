@@ -12,7 +12,7 @@ from builtins import str
 from subprocess import Popen, PIPE
 from os.path import abspath, dirname
 
-VERSION = (0, 2, 1, '', 2)
+VERSION = (0, 22, 0, 'final', 0)
 
 def git_sha():
     loc = abspath(dirname(__file__))
@@ -23,7 +23,7 @@ def git_sha():
             stdout=PIPE,
             stderr=PIPE
         )
-        return p.communicate()[0]
+        return p.communicate()[0].decode()
     # OSError occurs on Unix-derived platforms lacking Popen's configured shell
     # default, /bin/sh. E.g. Android.
     except OSError:
