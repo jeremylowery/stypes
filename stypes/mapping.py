@@ -27,7 +27,6 @@ class _BaseDict(Spec):
         self._pack_funs = [s.pack for n, s in self._spec_map]
         self._struct = struct.Struct(self._struct_fmt)
         self._setup_to_value_funs()
-        self._setup_to_bytes_funs()
 
     @property
     def width(self):
@@ -70,22 +69,7 @@ class _BaseDict(Spec):
             err = "Specification requires value to have a %r key" % e.args
             raise KeyError(err)
 
-        #if not self._to_bytes_funs:
         return b''.join(s(v) for s, v in zip(self._pack_funs, value))
-
-        #for idx, to_bytes in self._to_bytes_funs:
-        #    value[idx] = to_bytes(value[idx])
-        #    if isinstance(value[idx], UnconvertedValue):
-        #        return value[idx]
-
-        #return b''.join([s(v) for s, v in zip(self._pack_funs, value):])
-
-    def _setup_to_bytes_funs(self):
-        # Functions to call when we convert from a value to a string
-        self._to_bytes_funs = []
-        for idx, (name, spec) in enumerate(self._spec_map):
-            if hasattr(spec, 'to_bytes'):
-                self._to_bytes_funs.append((idx, spec.to_bytes))
 
     ## Private
     @property

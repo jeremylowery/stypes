@@ -78,7 +78,7 @@ class Numeric(Spec):
 
     def to_bytes(self, value):
         if value is None:
-            return ' '*self._width
+            return b' '*self._width
         text = self._precision_fmt % abs(value)
         buf = ConvertState(text[::-1])
         if value < 0:

@@ -5,6 +5,7 @@ from builtins import object
 import collections
 import copy
 import re
+import six
 import string
 import struct
 
@@ -57,7 +58,12 @@ class BaseSequence(Spec):
     def pack(self, value):
         # Shortcut
         #if not self._to_bytes_funs:
-        return b''.join(s(v) for s, v in zip(self._pack_funs, value))
+        calls = list(zip(self._pack_funs, value))
+        vals = [s(v) for s, v in calls]
+        try:
+            return b''.join(vals)
+        except TypeError as e:
+            raise SystemError(f"Invalid packing of sub element: {e} {vals}")
 
         #str_values = list(value)
         #for idx, to_str in self._to_bytes_funs:

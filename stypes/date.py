@@ -26,7 +26,7 @@ class Date(Spec):
 
     def to_bytes(self, value):
         if value is None:
-            return ' '*self.width
+            return b' '*self.width
         return value.strftime(self._fmt).encode()
 
 class Datetime(Spec):
@@ -49,7 +49,7 @@ class Datetime(Spec):
 
     def to_bytes(self, value):
         if value is None:
-            return ' '*self.width
+            return b' '*self.width
         return value.strftime(self._fmt).encode()
 
 def _formatter_width(fmt):
