@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='stypes',
-    version="0.23.0",
+    version="0.23.1",
     description='Encode and Decode Textual Data into Rich Python Data Structures',
     long_description="""
 Encode and Decode Textual Data into Rich Python Data Structures
