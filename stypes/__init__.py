@@ -2,6 +2,7 @@ __all__ = ['unpack', 'pack', 'spec', 'Integer', 'String', 'Record', 'Array',
 'List', 'Tuple', 'UnconvertedValue', 'NamedTuple', 'SpecificationError',
 'NumericFormatError', 'Numeric', 'BoxedString']
 
+__version__ = "0.23.0"
 from .date import Date, Datetime
 from .mapping import Dict
 try:
