@@ -1,10 +1,7 @@
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from six import StringIO
 from decimal import Decimal
+from io import StringIO
+from io import BytesIO
 import unittest
-from  io import BytesIO
 
 import stypes as st
 

@@ -36,13 +36,12 @@ A type specification will be one of the following:
       A sub-specification
 
 """
-from __future__ import absolute_import
 from builtins import map
 from builtins import range
 from past.builtins import basestring
 from builtins import object
 
-import collections
+import collections.abc
 import re
 import six
 
@@ -168,7 +167,7 @@ def _split_key_spec(spec):
         name, _, width = spec.partition(":")
         name = name.strip()
         width = width.strip() if width else "1"
-    elif isinstance(spec, collections.Sequence):
+    elif isinstance(spec, collections.abc.Sequence):
         if len(spec) > 1:
             name, width = spec[:2]
         elif len(spec) == 1:
@@ -285,7 +284,7 @@ def _split_field_layout(layout):
         name, _, width = layout.partition(":")
         name = name.strip()
         width = width.strip() if width else "1"
-    elif isinstance(layout, collections.Sequence):
+    elif isinstance(layout, collections.abc.Sequence):
         if len(layout) > 1:
             name, width = layout[:2]
         elif len(layout) == 1:

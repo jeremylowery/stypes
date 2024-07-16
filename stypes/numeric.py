@@ -1,13 +1,7 @@
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from builtins import object
 import decimal
-import io
+from io import StringIO
 import re
-
-from six import StringIO
 
 from .spec import Spec
 from .util import UnconvertedValue, InvalidSpecError

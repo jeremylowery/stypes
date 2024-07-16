@@ -113,7 +113,6 @@ or download from PyPI at https://pypi.python.org/pypi/stypes/ """ ,
     author_email="jeremy@bitrel.com",
     url="http://github.com/jeremylowery/stypes",
     install_requires=[
-        "future",
         "ordereddict; python_version < '3.0'"
     ],
     classifiers=[
